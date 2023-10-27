@@ -1,4 +1,4 @@
-# microsoft-governor-sharing
+# Governor Sharing
 
 ## Summary
 
