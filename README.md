@@ -2,9 +2,19 @@
 
 ## Summary
 
-Short summary on functionality and used technologies.
+SPFx WebPart shows documents which have been explicitly shared.
 
-[picture of the solution in action, if possible]
+It does this by using the following steps:
+- Issueing a Search Query (KQL) against the Graph API to retrieve documents where the managed property SharedWithUsersOWSUSER contains a value
+- Iterate through the result of the search query to get the permissions per file (/permissions endpoint of driveItems on GraphAPI)
+- Show the results in a ShimmeredDetailsList and the Pagination control for paging the results
+- By selecting a document and clicking on the Sharing Settings button will open the Manage Access pane for further review of the sharing
+
+Here is an example of document shared with an external user, notice the tooltip & icon in front of the document
+![Example Image](screenshot.png)
+
+Next, when clicking on the Sharing Settings, the Manage Access page tells you that a Sharing Link was created for an external user
+![Example Image](screenshot2.png)
 
 ## Used SharePoint Framework Version
 
@@ -25,14 +35,13 @@ Short summary on functionality and used technologies.
 
 | Solution    | Author(s)                                               |
 | ----------- | ------------------------------------------------------- |
-| folder name | Author details (name, company, twitter alias with link) |
+| Governor Sharing | Robin Meure MSFT                                        |
 
 ## Version history
 
 | Version | Date             | Comments        |
 | ------- | ---------------- | --------------- |
-| 1.1     | March 10, 2021   | Update comment  |
-| 1.0     | January 29, 2021 | Initial release |
+| 1.0     | October 27, 2023 | Initial release |
 
 ## Disclaimer
 
@@ -51,18 +60,6 @@ Short summary on functionality and used technologies.
 > Include any additional steps as needed.
 
 ## Features
-
-Description of the extension that expands upon high-level summary above.
-
-This extension illustrates the following concepts:
-
-- topic 1
-- topic 2
-- topic 3
-
-> Notice that better pictures and documentation will increase the sample usage and the value you are providing for others. Thanks for your submissions advance.
-
-> Share your web part with others through Microsoft 365 Patterns and Practices program to get visibility and exposure. More details on the community, open-source projects and other activities from http://aka.ms/m365pnp.
 
 ## References
 
