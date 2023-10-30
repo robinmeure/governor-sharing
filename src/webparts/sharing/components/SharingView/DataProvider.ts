@@ -16,10 +16,12 @@ import "@pnp/graph/users";
 import "@pnp/graph/onedrive";
 import "@pnp/graph/batching";
 import { IFacepilePersona } from "@fluentui/react";
+import { search } from "@microsoft/teams-js";
 
 export default  interface IDataProvider {
     getSharingLinks(listItems:Record<string, any>): Promise<ISharingResult[]>;
-    fetchSearchResultsAll(startRow:Number): Promise<Record<string, any>>;
+    //fetchSearchResultsAll(startRow:Number): Promise<Record<string, any>>;
+    getSearchResults(): Promise<Record<string, any>>;
     getassociatedGroups(): Promise<void>;
 }
 
@@ -246,11 +248,50 @@ export default class DataProvider implements IDataProvider{
         return sharedResults;
     }
 
-    public async fetchSearchResultsAll(): Promise<Record<string, any>>
+    public async getSearchResults(): Promise<Record<string, any>>
     {
-        let everyoneExceptExternalsUserName = `spo-grid-all-users/${this.tenantId}`;
         let listItems:Record<string, any> = {};
+        let searchResults:any[] = [];
+        searchResults = await this.fetchSearchResultsAll(0, searchResults);
 
+        searchResults.forEach(results =>
+        {
+            results.forEach(result =>
+            {
+                result.hitsContainers.forEach(hits => 
+                {   
+                    hits.hits.forEach(hit=>
+                    {
+                        let SharedWithUsersOWSUser = (hit.resource['listItem']['fields']['sharedWithUsersOWSUSER'] != undefined) ? hit.resource['listItem']['fields']['sharedWithUsersOWSUSER'] : null;
+                        const result:ISearchResultExtended = {
+                            DriveItemId : hit.resource.id,
+                            FileName : hit.resource['listItem']['fields']['fileName'],
+                            FileExtension : hit.resource['listItem']['fields']['fileExtension'],
+                            ListId : hit.resource['listItem']['fields']['listId'],
+                            FileId : hit.resource['listItem']['id'],
+                            DriveId: hit.resource['listItem']['fields']['driveId'],
+                            ListItemId : hit.resource['listItem']['fields']['listItemId'],
+                            Path : hit.resource['webUrl'],
+                            LastModifiedTime : hit.resource['lastModifiedDateTime'],
+                            SharedWithUsersOWSUSER : SharedWithUsersOWSUser
+                        }
+                        listItems[result.FileId] = result;
+                    });
+                });
+            });
+        });
+
+        return listItems;
+    }
+
+    private async fetchSearchResultsAll(page:number, searchResults?:any[]): Promise<any>
+    {
+        if (page == 0)
+        {
+            searchResults = [];
+        }
+
+        let everyoneExceptExternalsUserName = `spo-grid-all-users/${this.tenantId}`;
         let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${this.siteUrl}) `;
 
         Logger.write(`Issueing search query: ${query}`, LogLevel.Verbose);
@@ -260,35 +301,17 @@ export default class DataProvider implements IDataProvider{
                 queryString: `${query}`
             },
             fields: ["path", "id", "driveId","driveItemId", "listId", "listItemId", "fileName", "fileExtension", "webUrl","lastModifiedDateTime","lastModified","SharedWithUsersOWSUSER"],
-            from: 0,
-            size: 500,
+            from: `${page}`,
+            size: 500           
         });
         
-        
-        results.forEach(result =>
+        searchResults.push(results);
+
+        if (results[0].hitsContainers[0].moreResultsAvailable)
         {
-            result.hitsContainers.forEach(hits => 
-            {   
-                //Logger.write(`RowCount from searchquery: ${hits.hits.Total}`, LogLevel.Verbose);
-                hits.hits.forEach(hit=>
-                {
-                    let SharedWithUsersOWSUser = (hit.resource['listItem']['fields']['sharedWithUsersOWSUSER'] != undefined) ? hit.resource['listItem']['fields']['sharedWithUsersOWSUSER'] : null;
-                    const result:ISearchResultExtended = {
-                        DriveItemId : hit.resource.id,
-                        FileName : hit.resource['listItem']['fields']['fileName'],
-                        FileExtension : hit.resource['listItem']['fields']['fileExtension'],
-                        ListId : hit.resource['listItem']['fields']['listId'],
-                        FileId : hit.resource['listItem']['id'],
-                        DriveId: hit.resource['listItem']['fields']['driveId'],
-                        ListItemId : hit.resource['listItem']['fields']['listItemId'],
-                        Path : hit.resource['webUrl'],
-                        LastModifiedTime : hit.resource['lastModifiedDateTime'],
-                        SharedWithUsersOWSUSER : SharedWithUsersOWSUser
-                    }
-                    listItems[result.FileId] = result;
-                });
-            });
-        });
-        return listItems;
+            searchResults = await this.fetchSearchResultsAll(page + 500, searchResults)
+        }
+            
+        return searchResults;
     }
 }

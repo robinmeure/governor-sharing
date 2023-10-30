@@ -338,7 +338,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
       await this.props.dataProvider.getAssociatedGroups();
       
       // this will hold all the shared documents based on the search query
-      const searchItems:Record<string, any> = await this.props.dataProvider.fetchSearchResultsAll();
+      const searchItems:Record<string, any> = await this.props.dataProvider.getSearchResults();
       this.sharingLinkIds = Object.keys(searchItems);
 
       this.setState({
