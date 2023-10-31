@@ -7,7 +7,7 @@ import "@pnp/graph/groups";
 
 import { ISharingViewProps } from './components/SharingView/ISharingViewProps';
 import { initializeIcons } from '@fluentui/react/lib/Icons';
-
+import PnPTelemetry from "@pnp/telemetry-js";
 import "@pnp/sp/webs";
 import "@pnp/sp/search";
 import IDataProvider from './components/SharingView/DataProvider';
@@ -37,7 +37,6 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
   
   protected async onInit(): Promise<void> 
   {
-   
     // load the filetype icons and other icons
     initializeIcons(undefined, { disableWarnings: true });
     initializeFileTypeIcons();
@@ -45,6 +44,10 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     // setting up the logging framework
     Logger.subscribe(ConsoleListener(LOG_SOURCE));
     Logger.activeLogLevel = (this.properties.debugMode)? LogLevel.Verbose : LogLevel.Warning;
+    
+    // if you don't want to send telemetry data to PnP, you can opt-out here (see https://github.com/pnp/telemetry-js for details on what is being sent)
+    const telemetry = PnPTelemetry.getInstance();
+    telemetry.optOut();
     
     // loading the data provider to get access to the REST/Search API
     this.dataProvider = new DataProvider(this.context);
