@@ -12,13 +12,12 @@
   "preconfiguredEntries": [{
     "groupId": "5c03119e-3074-46fd-976b-c60198311f70", 
     "group": { "default": "Governor" },
-    "title": { "default": "Microsoft Governor Sharing" },
+    "title": { "default": "Governor Sharing" },
     "description": { "default": "Shows explicit sharing of documents" },
     "officeFabricIconFontName": "Page",
     "properties": {
       "description": "Sharing",
-      "debugMode":false,
-      "pagingLimit":15
+      "debugMode":false
     }
   }]
 }

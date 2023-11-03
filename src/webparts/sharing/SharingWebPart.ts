@@ -63,7 +63,7 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     const element: React.ReactElement<ISharingViewProps> = React.createElement(
       SharingViewSingle,
       {
-        pageLimit: this.properties.pagingLimit,
+        pageLimit: 15,
         context: this.context,
         isTeams: isTeams,
         dataProvider: this.dataProvider
@@ -83,10 +83,6 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
             {
               groupName: "Configuration",
               groupFields: [
-                PropertyPaneTextField('pagingLimit', {
-                  label: "When to show paging",
-                  description: "How many items should be shown before paging is enabled",
-                }),
                 PropertyPaneToggle('debugMode', {
                   label: "Enable debug mode",
                 })

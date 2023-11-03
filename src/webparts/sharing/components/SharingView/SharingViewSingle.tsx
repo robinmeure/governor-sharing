@@ -25,7 +25,7 @@ import * as React from 'react';
 import { ISharingResult } from "./ISharingResult";
 import { ISharingViewProps } from './ISharingViewProps';
 import ISharingViewState from './ISharingViewState';
-import { genericSort, textSort } from './utils';
+import { genericSort, textSort } from './Utils';
 
 export default class SharingViewSingle extends React.Component<ISharingViewProps, ISharingViewState> {
   private columns: IColumn[];
@@ -52,7 +52,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
       totalPages: 1,
       pageLimit: this.props.pageLimit,
       // initialization of the selected document
-      selectedDocument: { FileExtension: "", FileName: "", LastModified: null, SharedWith: null, ListId: "", ListItemId: 0, Url: "", FolderUrl: "" },
+      selectedDocument: { FileExtension: "", FileName: "", LastModified: null, SharedWith: null, ListId: "", ListItemId: 0, Url: "", FolderUrl: "", SiteUrl: "", Channel: "", SharingUserType: "" },
       // initialization of the dialog
       isOpen: false,
       hideSharingSettingsDialog: true,
@@ -161,9 +161,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
   private _renderItemColumn(item: ISharingResult, index: number, column: IColumn): any {
     const fieldContent = item[column.fieldName as keyof ISharingResult] as string;
 
-    // moved the person columns to the column definition since I don't have a context here 
-    //(nor is the this variable defined) to pass the serviceScope to get the LivePersona to work
-
+    // in here we're going to make the column render differently based on the column name
     switch (column.key) {
       case 'FileExtension':
         switch (item.FileExtension) {
@@ -201,7 +199,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
   // Gets the Selection Details
   private loadSharingDialogDetails(): void {
     const item = this.selection.getSelection()[0] as ISharingResult;
-    const url = `${this.siteUrl}/_layouts/15/sharedialog.aspx?listId=${item.ListId}&listItemId=${item.ListItemId}&clientId=sharePoint&mode=manageAccess&ma=0`;
+    const url = `${item.SiteUrl}/_layouts/15/sharedialog.aspx?listId=${item.ListId}&listItemId=${item.ListItemId}&clientId=sharePoint&mode=manageAccess&ma=0`;
 
     this.setState(
       {
@@ -304,7 +302,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
       return;
     }
     else {
-      this.setState({ statusMessage: `${this.sharingLinkIds.length} shared documents found` });
+      this.setState({ statusMessage: `${this.sharingLinkIds.length} shared items found` });
     }
     // get the sharing links for the items on the page
     this.sharingLinks = await this._processSharingLinks(paginatedItems);

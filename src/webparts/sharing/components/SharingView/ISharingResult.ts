@@ -12,5 +12,6 @@ export interface ISharingResult {
   Channel?: string;
   FileId?: string;
   SharingUserType?: any;
+  SiteUrl?:string;
 }
 export default ISharingResult;

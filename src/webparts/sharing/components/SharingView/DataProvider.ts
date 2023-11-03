@@ -15,7 +15,7 @@ import "@pnp/sp/search";
 import "@pnp/sp/sharing";
 import "@pnp/sp/webs";
 import { ISharingResult } from "./ISharingResult";
-import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from "./utils";
+import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from "./Utils";
 
 export default interface IDataProvider {
   getSharingLinks(listItems: Record<string, any>): Promise<ISharingResult[]>;
@@ -28,6 +28,7 @@ export default class DataProvider implements IDataProvider {
   private isTeams: boolean;
   private siteUrl: string;
   private tenantId: string;
+  private groupId: string;
   private sp: any;
   private graph: any;
   private standardGroups: string[] = [];
@@ -45,6 +46,8 @@ export default class DataProvider implements IDataProvider {
     if (this.isTeams) {
       this.siteUrl = this.webpartContext.sdks.microsoftTeams.context.teamSiteUrl;
       this.tenantId = this.webpartContext.sdks.microsoftTeams.context.tid;
+      this.groupId =  this.webpartContext.sdks.microsoftTeams.context.groupId;
+
     }
     else {
       this.siteUrl = this.webpartContext.pageContext.web.absoluteUrl;
@@ -121,15 +124,9 @@ export default class DataProvider implements IDataProvider {
       file.FolderName = folderName;
       file.FileId = fileId;
 
-      // if (file.FileName == "zalando-fossil-watch.pdf")
-      //     debugger;
-
       // if a file has inherited permissions, the propery is returned as "inheritedFrom": {}
       // if a file has unique permissions, the propery is not returned at all
       driveItem.forEach(permission => {
-        // if (permission.inheritedFrom != null)
-        //     return;
-        // only interested in the sharing links (perhaps we should also add the normal permissions?)
         if (permission.link) {
           switch (permission.link.scope) {
             case "anonymous":
@@ -199,7 +196,7 @@ export default class DataProvider implements IDataProvider {
       // building up the result to be returned
       const sharedResult: ISharingResult =
       {
-        FileExtension: (file.FileExtension === null) ? "folder" : file.FileExtension,
+        FileExtension: (file.FileExtension == null) ? "folder" : file.FileExtension,
         FileName: file.FileName,
         Channel: file.FolderName,
         LastModified: file.LastModifiedTime,
@@ -209,7 +206,8 @@ export default class DataProvider implements IDataProvider {
         Url: file.FileUrl,
         FolderUrl: file.FolderUrl,
         SharingUserType: sharingUserType,
-        FileId: file.FileId
+        FileId: file.FileId,
+        SiteUrl: file.SiteUrl
       };
       sharedResults.push(sharedResult);
     }
@@ -225,7 +223,12 @@ export default class DataProvider implements IDataProvider {
       results.forEach(result => {
         result.hitsContainers.forEach(hits => {
           hits.hits.forEach(hit => {
-            const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER !== undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
+            const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER != undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
+            
+            // if we don't get a driveId back (e.g. documentlibrary), then skip the returned item
+            if (hit.resource.listItem.fields.driveId == undefined)
+                return;
+
             const result: ISearchResultExtended = {
               DriveItemId: hit.resource.id,
               FileName: hit.resource.listItem.fields.fileName,
@@ -236,7 +239,8 @@ export default class DataProvider implements IDataProvider {
               ListItemId: hit.resource.listItem.fields.listItemId,
               Path: hit.resource.webUrl,
               LastModifiedTime: hit.resource.lastModifiedDateTime,
-              SharedWithUsersOWSUSER: SharedWithUsersOWSUser
+              SharedWithUsersOWSUSER: SharedWithUsersOWSUser,
+              SiteUrl:hit.resource.listItem.fields.spSiteUrl
             }
             listItems[result.FileId] = result;
           });
@@ -253,7 +257,9 @@ export default class DataProvider implements IDataProvider {
     }
 
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${this.tenantId}`;
-    const query = `(IsDocument:TRUE OR IsContainer:TRUE) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${this.siteUrl}) `;
+    const query = (this.isTeams) ? 
+    `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId})`
+    : `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${this.siteUrl})`
 
     Logger.write(`Issuing search query: ${query}`, LogLevel.Verbose);
     const results = await this.graph.query({
@@ -261,7 +267,7 @@ export default class DataProvider implements IDataProvider {
       query: {
         queryString: `${query}`
       },
-      fields: ["path", "id", "driveId", "driveItemId", "listId", "listItemId", "fileName", "fileExtension", "webUrl", "lastModifiedDateTime", "lastModified", "SharedWithUsersOWSUSER"],
+      fields: ["path", "id", "driveId", "driveItemId", "listId", "listItemId", "fileName", "fileExtension", "webUrl", "lastModifiedDateTime", "lastModified", "SharedWithUsersOWSUSER","SPSiteUrl"],
       from: `${page}`,
       size: 500
     });
@@ -272,6 +278,7 @@ export default class DataProvider implements IDataProvider {
       searchResults = await this.fetchSearchResultsAll(page + 500, searchResults)
     }
 
+    
     return searchResults;
   }
 }

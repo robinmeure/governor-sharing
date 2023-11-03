@@ -70,7 +70,7 @@ export function convertToGraphUserFromLinkKind(linkKind: number): microsoftgraph
 }
 
 export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePersona {
-  if (user['siteUser'] !== null) {
+  if (user['siteUser'] != null) {
     const siteUser = user['siteUser'];
     const _user: IFacepilePersona =
     {
@@ -80,7 +80,7 @@ export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePerson
     };
     return _user;
   }
-  else if (user['siteGroup'] !== null) {
+  else if (user['siteGroup'] != null) {
     const siteGroup = user['siteGroup'];
     const _user: IFacepilePersona =
     {
@@ -106,7 +106,7 @@ export function convertToFacePilePersona(users: IdentitySet[]): IFacepilePersona
   const _users: IFacepilePersona[] = [];
   if (users.length > 1) {
     users.forEach((user) => {
-      if (user['siteUser'] !== null) {
+      if (user['siteUser'] != null) {
         const siteUser = user['siteUser'];
         const _user: IFacepilePersona =
         {
@@ -128,26 +128,7 @@ export function convertToFacePilePersona(users: IdentitySet[]): IFacepilePersona
     });
   }
   else {
-    const user = users[0];
-    if (user['siteUser'] !== null) {
-      const siteUser = user['siteUser'];
-      const _user: IFacepilePersona =
-      {
-        data: (siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
-        personaName: siteUser.displayName,
-        name: siteUser.loginName.replace("i:0#.f|membership|", "")
-      };
-      _users.push(_user);
-    }
-    else {
-      const _user: IFacepilePersona =
-      {
-        id: user.user.id,
-        data: (user.user.id === null) ? "Guest" : "Member",
-        personaName: user.user.displayName
-      };
-      _users.push(_user);
-    }
+    _users.push(convertUserToFacePilePersona(users[0]));
   }
 
   return _users;
