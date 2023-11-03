@@ -68,3 +68,12 @@ Next, when clicking on the Sharing Settings, the Manage Access page tells you th
 - [Use Microsoft Graph in your solution](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/using-microsoft-graph-apis)
 - [Publish SharePoint Framework applications to the Marketplace](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/publish-to-marketplace-overview)
 - [Microsoft 365 Patterns and Practices](https://aka.ms/m365pnp) - Guidance, tooling, samples and open-source controls for your Microsoft 365 development
+
+## SharePoint App Deployment
+
+# Prerequisites
+• Microsoft 365 tenant.
+• A copy of the solution .sppkg package.
+• The user deploying an app must be a SharePoint Administrator or Global Administrator in Microsoft 365. 
+• A Global Administrator need to be approved and provide consent for the API permissions.
+
