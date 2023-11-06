@@ -124,6 +124,9 @@ export default class DataProvider implements IDataProvider {
       file.FolderName = folderName;
       file.FileId = fileId;
 
+      if (file.FileName == "Repertoire.Import.MU.Example.nl.pdf") 
+      debugger;
+
       // if a file has inherited permissions, the propery is returned as "inheritedFrom": {}
       // if a file has unique permissions, the propery is not returned at all
       driveItem.forEach(permission => {
@@ -176,6 +179,8 @@ export default class DataProvider implements IDataProvider {
       sharedWithUser = uniqForObject(sharedWithUser);
       if (sharedWithUser.length === 0)
         continue;
+
+    
 
       for (const user of sharedWithUser) {
         if (user.data === "Guest") {

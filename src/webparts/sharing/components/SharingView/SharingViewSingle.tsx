@@ -166,33 +166,33 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
       case 'FileExtension':
         switch (item.FileExtension) {
           case "folder": return <Icon {...getFileTypeIconProps({ type: FileIconType.documentsFolder, size: 16, imageFileType: 'png' })} />; break;
-          default: return <Icon {...getFileTypeIconProps({ extension: `${item.FileExtension}`, size: 16, imageFileType: 'png' })} />; break
+          default: return <Icon {...getFileTypeIconProps({ extension: `${item.FileExtension}`, size: 16, imageFileType: 'png' })} />; break;
         }
       case 'SharingUserType':
         switch (item.SharingUserType) {
           case "Guest": return <TooltipHost content="Shared with guest/external users" id="guestTip">
             <Icon aria-label="SecurityGroup" aria-describedby="guestTip" iconName="SecurityGroup" id="Guest" />
-          </TooltipHost>;
+          </TooltipHost>;break;
           case "Everyone": return <TooltipHost content="Shared with everyone" id="everyoneTip">
             <Icon aria-label="Family" aria-describedby="everyoneTip" iconName="Family" id="Family" />
-          </TooltipHost>;
+          </TooltipHost>;break;
           case "Member": return <span />;
           case "Link": return <TooltipHost content="Shared with organization" id="everyoneTip">
             <Icon aria-label="Family" aria-describedby="everyoneTip" iconName="Family" id="Family" />
-          </TooltipHost>;
+          </TooltipHost>;break;
           case "Inherited": return <TooltipHost content="Shared by inheritance" id="inheritedTip">
             <Icon aria-label="PartyLeader" aria-describedby="inheritedTip" iconName="PartyLeader" id="PartyLeader" />
-          </TooltipHost>;
+          </TooltipHost>;break;
         }
         break;
       case 'LastModified':
-        return <span>{moment(item.LastModified).format('LL')}</span>;
+        return <span>{moment(item.LastModified).format('LL')}</span>;break;
       case 'FileName':
-        return <span><Text><Link href={`${item.Url}`}>{`${item.FileName}`}</Link></Text></span>;
+        return <span><Text><Link href={`${item.Url}`}>{`${item.FileName}`}</Link></Text></span>;break;
       case 'Channel':
-        return <span><Text><Link href={`${item.FolderUrl}`}>{`${item.Channel}`}</Link></Text></span>;
+        return <span><Text><Link href={`${item.FolderUrl}`}>{`${item.Channel}`}</Link></Text></span>;break;
       default:
-        return <span>{fieldContent}</span>;
+        return <span>{fieldContent}</span>;break;
     }
   }
 

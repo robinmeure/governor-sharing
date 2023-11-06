@@ -120,7 +120,7 @@ export function convertToFacePilePersona(users: IdentitySet[]): IFacepilePersona
         const _user: IFacepilePersona =
         {
           name: user.user.id,
-          data: (user.user.id === null) ? "Guest" : "Member",
+          data: (user.user.id == null) ? "Guest" : "Member",
           personaName: user.user.displayName
         };
         _users.push(_user);
