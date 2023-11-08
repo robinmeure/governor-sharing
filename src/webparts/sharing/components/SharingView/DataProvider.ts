@@ -29,6 +29,7 @@ export default class DataProvider implements IDataProvider {
   private siteUrl: string;
   private tenantId: string;
   private groupId: string;
+  private isPrivateChannel:boolean = true;
   private sp: any;
   private graph: any;
   private standardGroups: string[] = [];
@@ -47,7 +48,7 @@ export default class DataProvider implements IDataProvider {
       this.siteUrl = this.webpartContext.sdks.microsoftTeams.context.teamSiteUrl;
       this.tenantId = this.webpartContext.sdks.microsoftTeams.context.tid;
       this.groupId =  this.webpartContext.sdks.microsoftTeams.context.groupId;
-
+      this.isPrivateChannel = (this.webpartContext.sdks.microsoftTeams.context.channelType == "Private");
     }
     else {
       this.siteUrl = this.webpartContext.pageContext.web.absoluteUrl;
@@ -124,9 +125,6 @@ export default class DataProvider implements IDataProvider {
       file.FolderName = folderName;
       file.FileId = fileId;
 
-      if (file.FileName == "Repertoire.Import.MU.Example.nl.pdf") 
-      debugger;
-
       // if a file has inherited permissions, the propery is returned as "inheritedFrom": {}
       // if a file has unique permissions, the propery is not returned at all
       driveItem.forEach(permission => {
@@ -183,7 +181,7 @@ export default class DataProvider implements IDataProvider {
     
 
       for (const user of sharedWithUser) {
-        if (user.data === "Guest") {
+        if (user.data == "Guest") {
           // this is most important, once we found guest users, we need to set the sharingUserType to Guest (and thus break out of the loop)
           sharingUserType = "Guest";
           break;
@@ -193,7 +191,7 @@ export default class DataProvider implements IDataProvider {
           sharingUserType = "Link";
           break;
         }
-        if (user.data === "Inherited") {
+        if (user.data == "Inherited") {
           sharingUserType = "Inherited";
         }
       }
@@ -262,7 +260,7 @@ export default class DataProvider implements IDataProvider {
     }
 
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${this.tenantId}`;
-    const query = (this.isTeams) ? 
+    const query = (this.isTeams && !this.isPrivateChannel) ? 
     `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId})`
     : `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${this.siteUrl})`
 
