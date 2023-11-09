@@ -26,8 +26,7 @@ const LOG_SOURCE: string = 'Microsoft-Governance-Sharing';
 
 export interface ISharingWebPartProps {
   description: string;
-  debugMode?: boolean;
-  pagingLimit?: number;
+  debugMode: boolean;
 }
 
 export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPartProps> {
@@ -43,14 +42,11 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     Logger.activeLogLevel = (this.properties.debugMode) ? LogLevel.Verbose : LogLevel.Warning;
 
     // if you don't want to send telemetry data to PnP, you can opt-out here (see https://github.com/pnp/telemetry-js for details on what is being sent)
-    const telemetry = PnPTelemetry.getInstance();
-    telemetry.optOut();
+    // const telemetry = PnPTelemetry.getInstance();
+    // telemetry.optOut();
 
     // loading the data provider to get access to the REST/Search API
     this.dataProvider = new DataProvider(this.context);
-
-    // do the awesome superonInit! ;)
-    await super.onInit();
   }
 
   public render(): void {

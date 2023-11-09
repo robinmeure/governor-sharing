@@ -125,6 +125,8 @@ export default class DataProvider implements IDataProvider {
       file.FolderName = folderName;
       file.FileId = fileId;
 
+      
+
       // if a file has inherited permissions, the propery is returned as "inheritedFrom": {}
       // if a file has unique permissions, the propery is not returned at all
       driveItem.forEach(permission => {
@@ -135,6 +137,7 @@ export default class DataProvider implements IDataProvider {
             case "organization": {
               const _user: IFacepilePersona = {};
               _user.personaName = permission.link.scope + " " + permission.link.type;
+              _user.data = "Organization";
               if (sharedWithUser.indexOf(_user) === -1) {
                 sharedWithUser.push(_user);
               }
@@ -179,21 +182,28 @@ export default class DataProvider implements IDataProvider {
         continue;
 
     
+      let isGuest = false;
+      let isLink = false;
+      let isInherited = false;
 
       for (const user of sharedWithUser) {
-        if (user.data == "Guest") {
-          // this is most important, once we found guest users, we need to set the sharingUserType to Guest (and thus break out of the loop)
-          sharingUserType = "Guest";
-          break;
+        switch(user.data)
+        {
+          case "Guest":isGuest = true;break;
+          case "Link":isLink = true;break;
+          case "Inherited":isInherited = true;break;
         }
-        if (user.personaName.indexOf("organization") > -1) {
-          // this is the next most important, once we found organization links, we need to set the sharingUserType to Link (and thus break out of the loop)
-          sharingUserType = "Link";
-          break;
-        }
-        if (user.data == "Inherited") {
-          sharingUserType = "Inherited";
-        }
+      }
+
+      // if we found a guest user, we need to set the sharingUserType to Guest
+      if (isGuest) {
+        sharingUserType = "Guest";
+      }
+      else if (isLink) { 
+        sharingUserType = "Link";
+      }
+      else if (isInherited) {
+        sharingUserType = "Inherited";
       }
 
       // building up the result to be returned
@@ -213,6 +223,7 @@ export default class DataProvider implements IDataProvider {
         SiteUrl: file.SiteUrl
       };
       sharedResults.push(sharedResult);
+      Logger.writeJSON(sharedResult, LogLevel.Verbose);
     }
     return sharedResults;
   }
@@ -246,6 +257,7 @@ export default class DataProvider implements IDataProvider {
               SiteUrl:hit.resource.listItem.fields.spSiteUrl
             }
             listItems[result.FileId] = result;
+            Logger.writeJSON(result, LogLevel.Verbose);
           });
         });
       });
@@ -260,6 +272,13 @@ export default class DataProvider implements IDataProvider {
     }
 
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${this.tenantId}`;
+
+    // the query consists of checking for the followin things:
+    // - IsDocument:TRUE OR IsContainer:TRUE --> we only want to return documents and folders
+    // - NOT FileExtension:aspx --> we don't want to return aspx pages
+    // - (SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone) --> we want to return all items that are shared with someone
+    // - (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId}) --> we only want to return items that are in the current group (e.g. in a channel, by this we also get items back from private channels in Teams for example)
+    // - (SPSiteUrl:${this.siteUrl}) --> we only want to return items that are in the current site
     const query = (this.isTeams && !this.isPrivateChannel) ? 
     `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId})`
     : `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${this.siteUrl})`

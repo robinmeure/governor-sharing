@@ -31,8 +31,8 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
   private columns: IColumn[];
   private selection: Selection;
   private siteUrl: string;
-  private sharingLinkIds: string[];
-  private sharingLinks: ISharingResult[];
+  private fileIds: string[];
+  private files: ISharingResult[];
 
   constructor(props: ISharingViewProps) {
     super(props);
@@ -43,9 +43,9 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
 
     this.state = {
       // initialization of the arrys holding the documents
-      sharingLinks: [],
-      sharingLinkIds: [],
-      sharingLinkIdsPaginated: [],
+      files: [],
+      fileIds: [],
+      searchItems: [],
       groups: [],
       // initialization of the pagination - need to do this for each detailsList
       currentPage: 1,
@@ -57,10 +57,8 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
       isOpen: false,
       hideSharingSettingsDialog: true,
       frameUrlSharingSettings: "",
-      selectedTab: "flexibleLinks",
       loadingComplete: false,
-      statusMessage: "",
-      listItems: [],
+      statusMessage: ""
     };
 
     const overflowButtonProps = {
@@ -229,20 +227,20 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
     });
 
     if (currColumn.data === 'string')
-      this.setState({ sharingLinks: textSort(this.state.sharingLinks, currColumn.fieldName!, currColumn.isSortedDescending) });
+      this.setState({ files: textSort(this.state.files, currColumn.fieldName!, currColumn.isSortedDescending) });
     else
-      this.setState({ sharingLinks: genericSort(this.state.sharingLinks, currColumn.fieldName!, currColumn.isSortedDescending) });
+      this.setState({ files: genericSort(this.state.files, currColumn.fieldName!, currColumn.isSortedDescending) });
   }
 
   private _onSelectedFiltersChange = (selectedFilters: string[]): void => {
     this.setState({ selectedFilter: selectedFilters[0] });
     // we only have 1 filter, so no need to actually see what we're filtering on, 
     // it's either showing only guests/external users or all users
-    this.setState({ sharingLinks: (selectedFilters.length > 0) ? this.state.sharingLinks.filter(i => i.SharingUserType == "Guest") : this.sharingLinks });
+    this.setState({ files: (selectedFilters.length > 0) ? this.state.files.filter(i => i.SharingUserType == "Guest") : this.files });
   }
 
   private _findItem = (findQuery: string): string => {
-    this.setState({ sharingLinks: findQuery ? this.sharingLinks.filter(i => i.FileName.toLowerCase().indexOf(findQuery.toLowerCase()) > -1) : this.sharingLinks });
+    this.setState({ files: findQuery ? this.files.filter(i => i.FileName.toLowerCase().indexOf(findQuery.toLowerCase()) > -1) : this.files });
     return findQuery;
   };
 
@@ -264,7 +262,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
 
     const paginatedListItems: Record<string, any> = {};
     fileIds.forEach((fileId) => {
-      paginatedListItems[fileId] = this.state.listItems[fileId];
+      paginatedListItems[fileId] = this.state.searchItems[fileId];
     });
 
 
@@ -277,7 +275,6 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
       if (sharedResult.SharedWith === null)
         return;
 
-      // if (sharingLinks.indexOf(sharedResult) > -1)
       sharingLinks.push(sharedResult)
     });
 
@@ -293,7 +290,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
     const firstIndex = lastIndex - this.state.pageLimit;
 
     // get the items to be displayed on the page
-    const paginatedItems = this.sharingLinkIds.slice(firstIndex, lastIndex);
+    const paginatedItems = this.fileIds.slice(firstIndex, lastIndex);
     this.setState({ currentPage: page });
 
     // if there are no items to be displayed, we're done
@@ -302,18 +299,18 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
       return;
     }
     else {
-      this.setState({ statusMessage: `${this.sharingLinkIds.length} shared items found` });
+      this.setState({ statusMessage: `${this.fileIds.length} shared items found` });
     }
     // get the sharing links for the items on the page
-    this.sharingLinks = await this._processSharingLinks(paginatedItems);
-    this.setState({ sharingLinks: this.sharingLinks });
+    this.files = await this._processSharingLinks(paginatedItems);
+    this.setState({ files: this.files });
 
     // if the filter is set already, enable it again for the next paged result set
     if (this.state.selectedFilter !== undefined) {
-      this.setState({ sharingLinks: this.sharingLinks.filter(i => i.SharingUserType === "Guest") });
+      this.setState({ files: this.files.filter(i => i.SharingUserType === "Guest") });
     }
     else {
-      this.setState({ sharingLinks: this.sharingLinks });
+      this.setState({ files: this.files });
     }
     this.setState({ loadingComplete: true });
   }
@@ -326,12 +323,12 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
 
       // this will hold all the shared documents based on the search query
       const searchItems: Record<string, any> = await this.props.dataProvider.getSearchResults();
-      this.sharingLinkIds = Object.keys(searchItems);
+      this.fileIds = Object.keys(searchItems);
 
       this.setState({
-        listItems: searchItems,
-        sharingLinkIds: this.sharingLinkIds,
-        totalPages: Math.ceil(this.sharingLinkIds.length / this.state.pageLimit),
+        searchItems: searchItems,
+        fileIds: this.fileIds,
+        totalPages: Math.ceil(this.fileIds.length / this.state.pageLimit),
       });
 
       await this.loadPage(this.state.currentPage);
@@ -339,7 +336,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
   }
 
   public render(): React.ReactElement<ISharingViewProps> {
-    const { currentPage, totalPages, sharingLinks, loadingComplete, statusMessage } = this.state;
+    const { currentPage, totalPages, files, loadingComplete, statusMessage } = this.state;
 
     return (
       <ThemeProvider>
@@ -383,14 +380,14 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
             usePageCache={true}
             columns={this.columns}
             enableShimmer={(!loadingComplete)}
-            items={sharingLinks}
+            items={files}
             selection={this.selection}
             onItemInvoked={this._handleItemInvoked}
             selectionMode={SelectionMode.single}
             onRenderItemColumn={this._renderItemColumn}
           />
           <Pagination
-            key="flexibleLinks"
+            key="files"
             currentPage={currentPage}
             totalPages={totalPages}
             onChange={(page) => {

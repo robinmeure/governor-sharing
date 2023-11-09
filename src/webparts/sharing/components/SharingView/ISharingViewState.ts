@@ -2,9 +2,9 @@ import { ISharingResult } from "./ISharingResult";
 import { IContextualMenuProps } from '@fluentui/react';
 
 export interface ISharingViewState {
-  sharingLinks: ISharingResult[];
-  sharingLinkIds: string[],
-  sharingLinkIdsPaginated: string[],
+  files: ISharingResult[];
+  fileIds: string[];
+  searchItems: Record<string, any>;
   groups: any[];
   isOpen: boolean;
   selectedDocument: ISharingResult;
@@ -15,11 +15,10 @@ export interface ISharingViewState {
   currentPage: number,
   totalPages: number,
   pageLimit: number,
-  selectedTab: string,
   selectedFilter?: string,
   loadingComplete: boolean,
   statusMessage: string,
-  listItems: Record<string, any>
+  
 }
 
 export default ISharingViewState;
