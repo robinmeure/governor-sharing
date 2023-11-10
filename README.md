@@ -10,10 +10,10 @@ It does this by using the following steps:
 - Show the results in a ShimmeredDetailsList and the Pagination control for paging the results
 - By selecting a document and clicking on the Sharing Settings button will open the Manage Access pane for further review of the sharing
 
-Here is an example of document shared with an external user, notice the tooltip & icon in front of the document
+Here is an example with a list of shared documents, with a clear distinction when they are shared with external users (notice the tooltip & icon in front of the document)
 ![Example Image](/screenshots/screenshot.png)
 
-Next, when clicking on the Sharing Settings, the Manage Access page tells you that a Sharing Link was created for an external user
+When you want to know more about the sharing settings of a particlar document, you can select the document and then click on the <b>Sharing Settings</b> button, this will open up the Manage Access page for the selected document which tells you that a sharing link was created for the external user.
 ![Example Image](/screenshots/screenshot2.png)
 
 ## Used SharePoint Framework Version
