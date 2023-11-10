@@ -141,11 +141,11 @@ For the Teams App deployment, the app needs to be deployed to the SharePoint App
 
 <img src="screenshots/Govenor_Sharing_AddtoTeam_SelectTeam.png" width="500"/>
 
-- Click on <b>Save/b>
+- Click on <b>Save</b>
 
 <img src="screenshots/Govenor_Sharing_AddtoTeam_Save.png" width="500"/>
 
-- The app has been added to a Team. The settings panel on the right side can be closed <b>Save/b>
+- The app has been added to a Team. The settings panel on the right side can be closed <b>Save</b>
 
 <img src="screenshots/Govenor_Sharing_AddedtoTeam.png width="500"/>
 
