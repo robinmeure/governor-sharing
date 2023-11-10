@@ -49,25 +49,17 @@ Next, when clicking on the Sharing Settings, the Manage Access page tells you th
 
 ---
 
-## Minimal Path to Awesome
+# Deployment Overview
+- [SharePoint App Deployment](https://github.com/robinmeure/governor-sharing/edit/jevande/README.md#sharepoint-app-deployment)
+  - [Prerequisites](https://github.com/robinmeure/governor-sharing/tree/jevande#prerequisites-1)
+  - [Step 1 - Add the app to the SharePoint App catalog](https://github.com/robinmeure/governor-sharing/tree/jevande#step-1---add-the-app-to-the-sharepoint-app-catalog)
+  - [Step 2 - Provide API consent](https://github.com/robinmeure/governor-sharing/tree/jevande#step-2---provide-api-consent)
+  - [Step 3 - Adding the app to a SharePoint site](https://github.com/robinmeure/governor-sharing/tree/jevande#step-3---adding-the-app-to-a-sharepoint-site)
 
-- Clone this repository
-- Ensure that you are at the solution folder
-- in the command-line run:
-  - **npm install**
-  - **gulp serve**
-
-> Include any additional steps as needed.
-
-## Features
-
-## References
-
-- [Getting started with SharePoint Framework](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/set-up-your-developer-tenant)
-- [Building for Microsoft teams](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/build-for-teams-overview)
-- [Use Microsoft Graph in your solution](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/web-parts/get-started/using-microsoft-graph-apis)
-- [Publish SharePoint Framework applications to the Marketplace](https://docs.microsoft.com/en-us/sharepoint/dev/spfx/publish-to-marketplace-overview)
-- [Microsoft 365 Patterns and Practices](https://aka.ms/m365pnp) - Guidance, tooling, samples and open-source controls for your Microsoft 365 development
+- [Teams App Deployment(https://github.com/robinmeure/governor-sharing/tree/jevande#teams-app-deployment)
+  - [Prerequisites](https://github.com/robinmeure/governor-sharing/tree/jevande#prerequisites-2)
+  - [Step 1 - Add the app to Teams App Catalog](https://github.com/robinmeure/governor-sharing/tree/jevande#step-1---add-the-app-to-teams-app-catalog)
+  - [Step 2 - Add the app to a Teams a tab](https://github.com/robinmeure/governor-sharing/tree/jevande#step-2---add-the-app-to-a-teams-a-tab)
 
 # SharePoint App Deployment
 
