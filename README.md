@@ -2,19 +2,19 @@
 
 ## Summary
 
-SPFx WebPart shows documents which have been explicitly shared.
+SPFx WebPart shows documents which have been (explicitly) shared within a SharePoint site or Team.
 
 It does this by using the following steps:
 - Issueing a Search Query (KQL) against the Graph API to retrieve documents where the managed property SharedWithUsersOWSUSER contains a value
-- Iterate through the result of the search query to get the permissions per file (/permissions endpoint of driveItems on GraphAPI)
+- Iterate through the result of the search query to get the permissions (e.g. sharing information) per file (/permissions endpoint of driveItems on GraphAPI)
 - Show the results in a ShimmeredDetailsList and the Pagination control for paging the results
 - By selecting a document and clicking on the Sharing Settings button will open the Manage Access pane for further review of the sharing
 
 Here is an example of document shared with an external user, notice the tooltip & icon in front of the document
-![Example Image](screenshot.png)
+![Example Image](/screenshots/screenshot.png)
 
 Next, when clicking on the Sharing Settings, the Manage Access page tells you that a Sharing Link was created for an external user
-![Example Image](screenshot2.png)
+![Example Image](/screenshots/screenshot2.png)
 
 ## Used SharePoint Framework Version
 
@@ -152,6 +152,14 @@ For the Teams App deployment, the app needs to be deployed to the SharePoint App
 
 # Troubleshooting 
 
+If you face any other errors, you can enable the debugging mode from the configuration pane. When this is enabled, there is a lot more details being outputted to the written to the console.
+
+- In green you see the search (KQL) query what is used to retrieve documents
+- In yellow, you see the search results
+- In blue, you see the transformation of combining the searchresults and the permission calls
+
+<img src="screenshots/debug.png" width="500"/>
+
 ## Known errors
 
 Issue: We can't upload the app because there's already an app in the catalog with the same app ID. To upload a new app, change the app ID and try again. To update an existing app, go to the app details page.
@@ -159,9 +167,6 @@ Issue: We can't upload the app because there's already an app in the catalog wit
 Solution: Detele the app in the Teams Apps overview and readd the package.
 
 More information about deleting apps in Teams can found here: https://learn.microsoft.com/en-us/microsoftteams/teams-custom-app-policies-and-settings#delete-custom-apps-from-your-organizations-catalog 
-
-
-Debug mode??
 
 
 
