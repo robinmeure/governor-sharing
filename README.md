@@ -139,7 +139,7 @@ For the Teams App deployment, the app needs to be deployed to the SharePoint App
 -Click on <b>“Add to a team”</b>, choose a team and a channel where you want the app to be added and click <b>“Set up a tab”</b> on the bottom right of the pop-up window.
 <img src="screenshots/Govenor_Sharing_AddtoTeamTab.png" width="500"/>
 
-<img src="screenshots/Govenor_Sharing_AddtoTeam_Search.png" width="500"/>
+<img src="screenshots/Govenor_Sharing_AddtoTeam_SelectTeam.png" width="500"/>
 
 # Troubleshooting 
 
