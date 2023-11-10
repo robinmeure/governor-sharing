@@ -56,7 +56,7 @@ Next, when clicking on the Sharing Settings, the Manage Access page tells you th
   - [Step 2 - Provide API consent](https://github.com/robinmeure/governor-sharing/tree/jevande#step-2---provide-api-consent)
   - [Step 3 - Adding the app to a SharePoint site](https://github.com/robinmeure/governor-sharing/tree/jevande#step-3---adding-the-app-to-a-sharepoint-site)
 
-- [Teams App Deployment(https://github.com/robinmeure/governor-sharing/tree/jevande#teams-app-deployment)
+- [Teams App Deployment](https://github.com/robinmeure/governor-sharing/tree/jevande#teams-app-deployment)
   - [Prerequisites](https://github.com/robinmeure/governor-sharing/tree/jevande#prerequisites-2)
   - [Step 1 - Add the app to Teams App Catalog](https://github.com/robinmeure/governor-sharing/tree/jevande#step-1---add-the-app-to-teams-app-catalog)
   - [Step 2 - Add the app to a Teams a tab](https://github.com/robinmeure/governor-sharing/tree/jevande#step-2---add-the-app-to-a-teams-a-tab)
