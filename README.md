@@ -147,7 +147,7 @@ For the Teams App deployment, the app needs to be deployed to the SharePoint App
 
 - The app has been added to a Team. The settings panel on the right side can be closed.
 
-<img src="screenshots/Govenor_Sharing_AddedtoTeam.png width="500"/>
+<img src="screenshots/Govenor_Sharing_AddedtoTeam.png" width="500"/>
 
 
 # Troubleshooting 
