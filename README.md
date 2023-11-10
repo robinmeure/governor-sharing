@@ -132,14 +132,23 @@ For the Teams App deployment, the app needs to be deployed to the SharePoint App
 ## Step 2 - Add the app to a Teams a tab
 
 - Go to MS Teams and click on the <b>Apps</b> on the left bar to open the App store of Teams.
-- On the left menu choose <b>“Built for your Org”</b> option to prefilter the apps and select “Governor sharing”. Click <b>Add</b>.
+- On the left menu choose <b>Built for your Org</b> option to prefilter the apps and select “Governor sharing”. Click <b>Add</b>.
 
 <img src="screenshots/Govenor_Sharing_AddtoTeam.png" width="500"/>
 
-- Click on <b>“Add to a team”</b>, choose a team and a channel where you want the app to be added and click <b>“Set up a tab”</b> on the bottom right of the pop-up window.
+- Click on <b>Add to a team</b>, choose a team and a channel where you want the app to be added and click <b>Set up a tab</b> on the bottom right of the pop-up window.
 <img src="screenshots/Govenor_Sharing_AddtoTeamTab.png" width="500"/>
 
 <img src="screenshots/Govenor_Sharing_AddtoTeam_SelectTeam.png" width="500"/>
+
+- Click on <b>Save/b>
+
+<img src="screenshots/Govenor_Sharing_AddtoTeam_Save.png" width="500"/>
+
+- The app has been added to a Team. The settings panel on the right side can be closed <b>Save/b>
+
+<img src="screenshots/Govenor_Sharing_AddedtoTeam.png width="500"/>
+
 
 # Troubleshooting 
 
