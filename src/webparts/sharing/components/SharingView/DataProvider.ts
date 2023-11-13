@@ -273,12 +273,13 @@ export default class DataProvider implements IDataProvider {
 
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${this.tenantId}`;
 
-    // the query consists of checking for the followin things:
-    // - IsDocument:TRUE OR IsContainer:TRUE --> we only want to return documents and folders
-    // - NOT FileExtension:aspx --> we don't want to return aspx pages
-    // - (SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone) --> we want to return all items that are shared with someone
-    // - (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId}) --> we only want to return items that are in the current group (e.g. in a channel, by this we also get items back from private channels in Teams for example)
-    // - (SPSiteUrl:${this.siteUrl}) --> we only want to return items that are in the current site
+    // the query consists of checking for the following things:
+    // - IsDocument:TRUE OR IsContainer:TRUE -> we only want files and folders
+    // - NOT FileExtension:aspx -> we don't want to return aspx pages
+    // - (SharedWithUsersOWSUSER:* OR SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone) -> we want to return all files that are shared with someone
+    // - (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId}) -> we want to return all files that are in the current group
+    // - SPSiteUrl:${this.siteUrl} -> we want to return all files that are in the current site
+    
     const query = (this.isTeams && !this.isPrivateChannel) ? 
     `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId})`
     : `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${this.siteUrl})`
