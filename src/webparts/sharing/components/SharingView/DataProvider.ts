@@ -190,7 +190,7 @@ export default class DataProvider implements IDataProvider {
         switch(user.data)
         {
           case "Guest":isGuest = true;break;
-          case "Link":isLink = true;break;
+          case "Organization":isLink = true;break;
           case "Inherited":isInherited = true;break;
         }
       }
@@ -274,11 +274,13 @@ export default class DataProvider implements IDataProvider {
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${this.tenantId}`;
 
     // the query consists of checking for the following things:
-    // - IsDocument:TRUE OR IsContainer:TRUE -> we only want files and folders
+    // - IsDocument:TRUE OR IsContainer:TRUE -> we only want to return documents and folders
     // - NOT FileExtension:aspx -> we don't want to return aspx pages
-    // - (SharedWithUsersOWSUSER:* OR SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone) -> we want to return all files that are shared with someone
-    // - (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId}) -> we want to return all files that are in the current group
-    // - SPSiteUrl:${this.siteUrl} -> we want to return all files that are in the current site
+    // - (SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone) -> we only want to return items that are shared with someone
+    // - (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId}) -> we only want to return items that are in the current group
+    // - SPSiteUrl:${this.siteUrl} -> we only want to return items that are in the current site
+    // - size: 500 -> we want to return 500 items per page
+    // - from: ${page} -> we want to return the next page of results
     
     const query = (this.isTeams && !this.isPrivateChannel) ? 
     `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId})`
