@@ -1,0 +1,22 @@
+{
+    "name": "SPFx Dev Container",
+    "image": "mcr.microsoft.com/vscode/devcontainers/javascript-node:18",
+    "features": {
+      "ghcr.io/devcontainers/features/node:1": {
+        "version": "18"
+      }
+    },
+    "customizations": {
+      "vscode": {
+        "extensions": [
+          "ms-vscode.vscode-typescript-tslint-plugin",
+          "esbenp.prettier-vscode",
+          "dbaeumer.vscode-eslint"
+        ],
+        "settings": {
+          "terminal.integrated.shell.linux": "/bin/bash"
+        }
+      }
+    },
+    "postCreateCommand": "npm install"
+  }
