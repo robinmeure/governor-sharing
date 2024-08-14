@@ -3,7 +3,7 @@
     "image": "mcr.microsoft.com/vscode/devcontainers/javascript-node:18",
     "features": {
       "ghcr.io/devcontainers/features/node:1": {
-        "version": "16"
+        "version": "18"
       }
     },
     "customizations": {
