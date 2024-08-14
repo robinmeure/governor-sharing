@@ -285,24 +285,24 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
     // to inform the user we're getting items, we set the loadingComplete to false to enable the 'shimmer' effect
     this.setState({ loadingComplete: false });
 
-    // get the first and last index of the items to be displayed on the page
-    const lastIndex = page * this.state.pageLimit;
-    const firstIndex = lastIndex - this.state.pageLimit;
+    // // get the first and last index of the items to be displayed on the page
+    // const lastIndex = page * this.state.pageLimit;
+    // const firstIndex = lastIndex - this.state.pageLimit;
 
-    // get the items to be displayed on the page
-    const paginatedItems = this.fileIds.slice(firstIndex, lastIndex);
-    this.setState({ currentPage: page });
+    // // get the items to be displayed on the page
+    // const paginatedItems = this.fileIds.slice(firstIndex, lastIndex);
+    // this.setState({ currentPage: page });
 
-    // if there are no items to be displayed, we're done
-    if (paginatedItems.length == 0) {
-      this.setState({ loadingComplete: true, statusMessage: "No items to display" });
-      return;
-    }
-    else {
-      this.setState({ statusMessage: `${this.fileIds.length} shared items found` });
-    }
+    // // if there are no items to be displayed, we're done
+    // if (paginatedItems.length == 0) {
+    //   this.setState({ loadingComplete: true, statusMessage: "No items to display" });
+    //   return;
+    // }
+    // else {
+    //   this.setState({ statusMessage: `${this.fileIds.length} shared items found` });
+    // }
     // get the sharing links for the items on the page
-    this.files = await this._processSharingLinks(paginatedItems);
+    this.files = await this.props.dataProvider.fetchDatafromJson();
     this.setState({ files: this.files });
 
     // if the filter is set already, enable it again for the next paged result set

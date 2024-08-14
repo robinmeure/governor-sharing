@@ -16,6 +16,9 @@ import "@pnp/sp/sharing";
 import "@pnp/sp/webs";
 import { ISharingResult } from "./ISharingResult";
 import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from "./Utils";
+import MockSharingData from "./MockSharingData";
+import SharedWith from "./SharedWith";
+
 
 export default interface IDataProvider {
   getSharingLinks(listItems: Record<string, any>): Promise<ISharingResult[]>;
@@ -236,6 +239,8 @@ export default class DataProvider implements IDataProvider {
     searchResults.forEach(results => {
       results.forEach(result => {
         result.hitsContainers.forEach(hits => {
+          if (hits.total === 0)
+            return;
           hits.hits.forEach(hit => {
             const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER != undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
             
@@ -306,4 +311,89 @@ export default class DataProvider implements IDataProvider {
     
     return searchResults;
   }
+
+  public async fetchDatafromJson(): Promise<ISharingResult[]> 
+  {
+    const sharedResults: ISharingResult[] = [];
+    const data = await MockSharingData.get();
+
+    
+
+    data.forEach(item => {
+      let sharingUserType = "Member";
+      let isGuest = false;
+      let isLink = false;
+      let isInherited = false;
+
+      let sharedWithUser: IFacepilePersona[] = [];
+
+      if (item.SharedWith == null)
+        return;
+      // checking all then SharedWith entries and adding them to the sharedWithUser array
+      item.SharedWith.forEach(sharedUser => {
+        const _user: IFacepilePersona = {};
+        switch(sharedUser.Type)
+        {
+          case "Internal":_user.personaName = sharedUser.Name;_user.data = "Member"; break;
+          case "SecurityGroup":_user.personaName = sharedUser.Name;_user.data = "Organization";break;
+          case "External":_user.personaName = sharedUser.Name;_user.data = "Guest";break;
+          case "SharePointGroup":_user.personaName = sharedUser.Name;_user.data = "Member";break;
+        } 
+        
+        sharedWithUser.push(_user);  
+      });
+
+      // if sharing links are used, we need to add them to the sharedWithUser array
+      if (item.LinkId !== null) {
+        const _user: IFacepilePersona = {};
+        _user.personaName = item.LinkScope
+        _user.data = "Organization";
+        if (sharedWithUser.indexOf(_user) === -1) {
+          sharedWithUser.push(_user);
+        }
+      }
+
+      for (const user of sharedWithUser) {
+        switch(user.data)
+        {
+          case "Guest":isGuest = true;break;
+          case "Organization":isLink = true;break;
+          case "Inherited":isInherited = true;break;
+        }
+      }
+
+      // if we found a guest user, we need to set the sharingUserType to Guest
+      if (isGuest) {
+        sharingUserType = "Guest";
+      }
+      else if (isLink) { 
+        sharingUserType = "Link";
+      }
+      else if (isInherited) {
+        sharingUserType = "Inherited";
+      }
+
+      const sharedResult: ISharingResult =
+      {
+        FileExtension: (item.FileExtension == null) ? "folder" : item.FileExtension,
+        FileName:null,
+        Channel:null,
+        LastModified: null,
+        SharedWith: sharedWithUser,
+        ListId: null,
+        ListItemId: null,
+        Url: item.ItemURL,
+        FolderUrl: item.ItemType,
+        SharingUserType:sharingUserType,
+        FileId: item.WebId,
+        SiteUrl: item.SiteId
+      }
+      sharedResults.push(sharedResult);
+    });
+
+
+    debugger;
+    return sharedResults;
+  }
+
 }
