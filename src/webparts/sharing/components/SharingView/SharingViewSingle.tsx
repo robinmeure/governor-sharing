@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   DialogType,
   Facepile,
@@ -170,27 +172,27 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
         switch (item.SharingUserType) {
           case "Guest": return <TooltipHost content="Shared with guest/external users" id="guestTip">
             <Icon aria-label="SecurityGroup" aria-describedby="guestTip" iconName="SecurityGroup" id="Guest" />
-          </TooltipHost>;break;
+          </TooltipHost>; break;
           case "Everyone": return <TooltipHost content="Shared with everyone" id="everyoneTip">
             <Icon aria-label="Family" aria-describedby="everyoneTip" iconName="Family" id="Family" />
-          </TooltipHost>;break;
+          </TooltipHost>; break;
           case "Member": return <span />;
           case "Link": return <TooltipHost content="Shared with organization" id="everyoneTip">
             <Icon aria-label="Family" aria-describedby="everyoneTip" iconName="Family" id="Family" />
-          </TooltipHost>;break;
+          </TooltipHost>; break;
           case "Inherited": return <TooltipHost content="Shared by inheritance" id="inheritedTip">
             <Icon aria-label="PartyLeader" aria-describedby="inheritedTip" iconName="PartyLeader" id="PartyLeader" />
-          </TooltipHost>;break;
+          </TooltipHost>; break;
         }
         break;
       case 'LastModified':
-        return <span>{moment(item.LastModified).format('LL')}</span>;break;
+        return <span>{moment(item.LastModified).format('LL')}</span>; break;
       case 'FileName':
-        return <span><Text><Link href={`${item.Url}`}>{`${item.FileName}`}</Link></Text></span>;break;
+        return <span><Text><Link href={`${item.Url}`}>{`${item.FileName}`}</Link></Text></span>; break;
       case 'Channel':
-        return <span><Text><Link href={`${item.FolderUrl}`}>{`${item.Channel}`}</Link></Text></span>;break;
+        return <span><Text><Link href={`${item.FolderUrl}`}>{`${item.Channel}`}</Link></Text></span>; break;
       default:
-        return <span>{fieldContent}</span>;break;
+        return <span>{fieldContent}</span>; break;
     }
   }
 
@@ -210,6 +212,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
   // Handle Item Invoked - Item Invoked is when user selects a row
   // and presses the ENTER key
   private _handleItemInvoked = (item: ISharingResult): void => {
+    console.log("SharingViewSingle ~ item:", item);
   }
 
   private _onColumnClick = (ev: React.MouseEvent<HTMLElement>, column: IColumn): void => {
@@ -236,7 +239,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
     this.setState({ selectedFilter: selectedFilters[0] });
     // we only have 1 filter, so no need to actually see what we're filtering on, 
     // it's either showing only guests/external users or all users
-    this.setState({ files: (selectedFilters.length > 0) ? this.state.files.filter(i => i.SharingUserType == "Guest") : this.files });
+    this.setState({ files: (selectedFilters.length > 0) ? this.state.files.filter(i => i.SharingUserType === "Guest") : this.files });
   }
 
   private _findItem = (findQuery: string): string => {
@@ -245,9 +248,11 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
   };
 
   // needs to be here for the iframe to be rendered that holds the manage access page
-  private _onIframeLoaded() { }
+  private _onIframeLoaded(): void {
+    console.log("_onIframeLoaded called");
+  }
 
-  private _onDialogDismiss() {
+  private _onDialogDismiss(): void {
     this.setState(
       {
         hideSharingSettingsDialog: true
@@ -294,7 +299,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
     this.setState({ currentPage: page });
 
     // if there are no items to be displayed, we're done
-    if (paginatedItems.length == 0) {
+    if (paginatedItems.length === 0) {
       this.setState({ loadingComplete: true, statusMessage: "No items to display" });
       return;
     }
@@ -315,7 +320,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
     this.setState({ loadingComplete: true });
   }
 
-  public componentDidMount() {
+  public componentDidMount(): void {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     (async () => {
       // get the default group titles, this is used to later determine if documents have inherited permissions
@@ -337,6 +342,7 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
 
   public render(): React.ReactElement<ISharingViewProps> {
     const { currentPage, totalPages, files, loadingComplete, statusMessage } = this.state;
+    console.log("FazLog ~ SharingViewSingle ~ render ~ files:", files);
 
     return (
       <ThemeProvider>

@@ -1,3 +1,5 @@
+/* eslint-disable dot-notation */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { IColumn, IContextualMenuItem, IFacepilePersona } from '@fluentui/react';
 import { IdentitySet } from '@microsoft/microsoft-graph-types';
@@ -10,7 +12,8 @@ export function genericSort<T>(items: T[], columnKey: string, isSortedDescending
 }
 // thanks to Michael Norward for this function, https://stackoverflow.com/questions/8900732/sort-objects-in-an-array-alphabetically-on-one-property-of-the-array
 export function textSort(objectsArr: any[], prop, isSortedDescending = true): any[] {
-  const objectsHaveProp = objectsArr.every(object => object.hasOwnProperty(prop));
+  // eslint-disable-next-line no-prototype-builtins
+  const objectsHaveProp = objectsArr.every((object: any) => object.hasOwnProperty(prop));
   if (objectsHaveProp) {
     const newObjectsArr = objectsArr.slice();
     newObjectsArr.sort((a, b) => {
@@ -70,18 +73,18 @@ export function convertToGraphUserFromLinkKind(linkKind: number): microsoftgraph
 }
 
 export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePersona {
-  if (user['siteUser'] != null) {
-    const siteUser = user['siteUser'];
+  if (user["siteUser"] !== null) {
+    const siteUser = user["siteUser"];
     const _user: IFacepilePersona =
     {
-      data: (siteUser.loginName.indexOf('#ext') != -1) ? "Guest" : "Member",
+      data: (siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
       personaName: siteUser.displayName,
       name: siteUser.loginName.replace("i:0#.f|membership|", "")
     };
     return _user;
   }
-  else if (user['siteGroup'] != null) {
-    const siteGroup = user['siteGroup'];
+  else if (user["siteGroup"] !== null) {
+    const siteGroup = user["siteGroup"];
     const _user: IFacepilePersona =
     {
       data: "Group",
@@ -94,7 +97,7 @@ export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePerson
     const _user: IFacepilePersona =
     {
       name: user.user.id,
-      data: (user.user.id == null) ? "Guest" : "Member",
+      data: (user.user.id === null) ? "Guest" : "Member",
       personaName: user.user.displayName
     };
     return _user;
@@ -106,8 +109,8 @@ export function convertToFacePilePersona(users: IdentitySet[]): IFacepilePersona
   const _users: IFacepilePersona[] = [];
   if (users.length > 1) {
     users.forEach((user) => {
-      if (user['siteUser'] != null) {
-        const siteUser = user['siteUser'];
+      if (user["siteUser"] !== null) {
+        const siteUser = user["siteUser"];
         const _user: IFacepilePersona =
         {
           data: (siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
@@ -120,7 +123,7 @@ export function convertToFacePilePersona(users: IdentitySet[]): IFacepilePersona
         const _user: IFacepilePersona =
         {
           name: user.user.id,
-          data: (user.user.id == null) ? "Guest" : "Member",
+          data: (user.user.id === null) ? "Guest" : "Member",
           personaName: user.user.displayName
         };
         _users.push(_user);

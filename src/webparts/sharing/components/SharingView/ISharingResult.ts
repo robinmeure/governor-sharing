@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IFacepilePersona } from "@fluentui/react";
 
 export interface ISharingResult {
@@ -12,6 +13,6 @@ export interface ISharingResult {
   Channel?: string;
   FileId?: string;
   SharingUserType?: any;
-  SiteUrl?:string;
+  SiteUrl?: string;
 }
 export default ISharingResult;

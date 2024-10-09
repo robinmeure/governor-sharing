@@ -7,7 +7,6 @@ import "@pnp/graph/groups";
 
 import { ISharingViewProps } from './components/SharingView/ISharingViewProps';
 import { initializeIcons } from '@fluentui/react/lib/Icons';
-import PnPTelemetry from "@pnp/telemetry-js";
 import "@pnp/sp/webs";
 import "@pnp/sp/search";
 import IDataProvider from './components/SharingView/DataProvider';
@@ -19,7 +18,7 @@ import {
   ConsoleListener,
   LogLevel
 } from "@pnp/logging";
-import { IPropertyPaneConfiguration, PropertyPaneToggle, PropertyPaneTextField } from '@microsoft/sp-property-pane';
+import { IPropertyPaneConfiguration, PropertyPaneToggle } from '@microsoft/sp-property-pane';
 import SharingViewSingle from './components/SharingView/SharingViewSingle';
 
 const LOG_SOURCE: string = 'Microsoft-Governance-Sharing';
@@ -65,6 +64,7 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
         dataProvider: this.dataProvider
       }
     );
+    // eslint-disable-next-line @microsoft/spfx/pair-react-dom-render-unmount
     ReactDom.render(element, this.domElement);
   }
 

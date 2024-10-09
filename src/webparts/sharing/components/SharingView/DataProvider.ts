@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { spfi, SPFx } from '@pnp/sp';
 import { ISearchResultExtended } from "./ISearchResultExtended";
@@ -29,7 +30,7 @@ export default class DataProvider implements IDataProvider {
   private siteUrl: string;
   private tenantId: string;
   private groupId: string;
-  private isPrivateChannel:boolean = true;
+  private isPrivateChannel: boolean = true;
   private sp: any;
   private graph: any;
   private standardGroups: string[] = [];
@@ -47,8 +48,8 @@ export default class DataProvider implements IDataProvider {
     if (this.isTeams) {
       this.siteUrl = this.webpartContext.sdks.microsoftTeams.context.teamSiteUrl;
       this.tenantId = this.webpartContext.sdks.microsoftTeams.context.tid;
-      this.groupId =  this.webpartContext.sdks.microsoftTeams.context.groupId;
-      this.isPrivateChannel = (this.webpartContext.sdks.microsoftTeams.context.channelType == "Private");
+      this.groupId = this.webpartContext.sdks.microsoftTeams.context.groupId;
+      this.isPrivateChannel = (this.webpartContext.sdks.microsoftTeams.context.channelType === "Private");
     }
     else {
       this.siteUrl = this.webpartContext.pageContext.web.absoluteUrl;
@@ -85,9 +86,8 @@ export default class DataProvider implements IDataProvider {
       // adding the permissions endpoint
       const graphQueryable = GraphQueryable(driveItemQuery, "permissions")
       // getting the permissions and adding the request to the batch
-      graphGet(GraphQueryable(graphQueryable)).then(r => {
-        driveItems[fileId] = r;
-      });
+      const r = await graphGet(GraphQueryable(graphQueryable));
+      driveItems[fileId] = r;
     }
 
     // Executes the batched calls
@@ -125,7 +125,7 @@ export default class DataProvider implements IDataProvider {
       file.FolderName = folderName;
       file.FileId = fileId;
 
-      
+
 
       // if a file has inherited permissions, the propery is returned as "inheritedFrom": {}
       // if a file has unique permissions, the propery is not returned at all
@@ -181,17 +181,16 @@ export default class DataProvider implements IDataProvider {
       if (sharedWithUser.length === 0)
         continue;
 
-    
+
       let isGuest = false;
       let isLink = false;
       let isInherited = false;
 
       for (const user of sharedWithUser) {
-        switch(user.data)
-        {
-          case "Guest":isGuest = true;break;
-          case "Organization":isLink = true;break;
-          case "Inherited":isInherited = true;break;
+        switch (user.data) {
+          case "Guest": isGuest = true; break;
+          case "Organization": isLink = true; break;
+          case "Inherited": isInherited = true; break;
         }
       }
 
@@ -199,7 +198,7 @@ export default class DataProvider implements IDataProvider {
       if (isGuest) {
         sharingUserType = "Guest";
       }
-      else if (isLink) { 
+      else if (isLink) {
         sharingUserType = "Link";
       }
       else if (isInherited) {
@@ -209,7 +208,7 @@ export default class DataProvider implements IDataProvider {
       // building up the result to be returned
       const sharedResult: ISharingResult =
       {
-        FileExtension: (file.FileExtension == null) ? "folder" : file.FileExtension,
+        FileExtension: (file.FileExtension === null) ? "folder" : file.FileExtension,
         FileName: file.FileName,
         Channel: file.FolderName,
         LastModified: file.LastModifiedTime,
@@ -237,11 +236,11 @@ export default class DataProvider implements IDataProvider {
       results.forEach(result => {
         result.hitsContainers.forEach(hits => {
           hits.hits.forEach(hit => {
-            const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER != undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
-            
+            const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER !== undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
+
             // if we don't get a driveId back (e.g. documentlibrary), then skip the returned item
-            if (hit.resource.listItem.fields.driveId == undefined)
-                return;
+            if (hit.resource.listItem.fields.driveId === undefined)
+              return;
 
             const result: ISearchResultExtended = {
               DriveItemId: hit.resource.id,
@@ -254,7 +253,7 @@ export default class DataProvider implements IDataProvider {
               Path: hit.resource.webUrl,
               LastModifiedTime: hit.resource.lastModifiedDateTime,
               SharedWithUsersOWSUSER: SharedWithUsersOWSUser,
-              SiteUrl:hit.resource.listItem.fields.spSiteUrl
+              SiteUrl: hit.resource.listItem.fields.spSiteUrl
             }
             listItems[result.FileId] = result;
             Logger.writeJSON(result, LogLevel.Verbose);
@@ -281,10 +280,10 @@ export default class DataProvider implements IDataProvider {
     // - SPSiteUrl:${this.siteUrl} -> we only want to return items that are in the current site
     // - size: 500 -> we want to return 500 items per page
     // - from: ${page} -> we want to return the next page of results
-    
-    const query = (this.isTeams && !this.isPrivateChannel) ? 
-    `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId})`
-    : `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${this.siteUrl})`
+
+    const query = (this.isTeams && !this.isPrivateChannel) ?
+      `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${this.groupId} OR RelatedGroupId:${this.groupId})`
+      : `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${this.siteUrl})`
 
     Logger.write(`Issuing search query: ${query}`, LogLevel.Verbose);
     const results = await this.graph.query({
@@ -292,7 +291,7 @@ export default class DataProvider implements IDataProvider {
       query: {
         queryString: `${query}`
       },
-      fields: ["path", "id", "driveId", "driveItemId", "listId", "listItemId", "fileName", "fileExtension", "webUrl", "lastModifiedDateTime", "lastModified", "SharedWithUsersOWSUSER","SPSiteUrl"],
+      fields: ["path", "id", "driveId", "driveItemId", "listId", "listItemId", "fileName", "fileExtension", "webUrl", "lastModifiedDateTime", "lastModified", "SharedWithUsersOWSUSER", "SPSiteUrl"],
       from: `${page}`,
       size: 500
     });
@@ -303,7 +302,7 @@ export default class DataProvider implements IDataProvider {
       searchResults = await this.fetchSearchResultsAll(page + 500, searchResults)
     }
 
-    
+
     return searchResults;
   }
 }
