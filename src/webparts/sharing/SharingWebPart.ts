@@ -5,7 +5,6 @@ import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import "@pnp/graph/groups";
 
-import { ISharingViewProps } from './components/SharingView/ISharingViewProps';
 import { initializeIcons } from '@fluentui/react/lib/Icons';
 import "@pnp/sp/webs";
 import "@pnp/sp/search";
@@ -19,7 +18,9 @@ import {
   LogLevel
 } from "@pnp/logging";
 import { IPropertyPaneConfiguration, PropertyPaneToggle } from '@microsoft/sp-property-pane';
-import SharingViewSingle from './components/SharingView/SharingViewSingle';
+import { ISharingWebPartContext } from './model';
+import { SharingWebPartContext } from './hooks/SharingWebPartContext';
+import SharingApp from './components/SharingApp';
 
 const LOG_SOURCE: string = 'Microsoft-Governance-Sharing';
 
@@ -49,23 +50,38 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
   }
 
   public render(): void {
-    // determine if we're in Teams or not
-    let isTeams: boolean = false;
-    if (this.context.sdks.microsoftTeams) {
-      isTeams = true;
-    }
+    const sharingWebPartContextValue: ISharingWebPartContext = {
+      pageLimit: 15,
+      webpartContext: this.context,
+      isTeams: this.context.sdks.microsoftTeams ? true : false,
+      dataProvider: this.dataProvider
+    };
 
-    const element: React.ReactElement<ISharingViewProps> = React.createElement(
-      SharingViewSingle,
+    // Put the context value with Provider
+    const element: React.ReactElement = React.createElement(
+      SharingWebPartContext.Provider,
       {
-        pageLimit: 15,
-        context: this.context,
-        isTeams: isTeams,
-        dataProvider: this.dataProvider
-      }
+        value: sharingWebPartContextValue
+      },
+      React.createElement(SharingApp)
     );
+
     // eslint-disable-next-line @microsoft/spfx/pair-react-dom-render-unmount
     ReactDom.render(element, this.domElement);
+
+
+
+    // const element: React.ReactElement<ISharingViewProps> = React.createElement(
+    //   SharingViewSingle,
+    //   {
+    //     pageLimit: 15,
+    //     context: this.context,
+    //     isTeams: isTeams,
+    //     dataProvider: this.dataProvider
+    //   }
+    // );
+    // // eslint-disable-next-line @microsoft/spfx/pair-react-dom-render-unmount
+    // ReactDom.render(element, this.domElement);
   }
 
   protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
