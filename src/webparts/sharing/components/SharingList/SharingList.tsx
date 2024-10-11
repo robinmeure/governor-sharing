@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as React from 'react';
 import { useContext } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
+import { IContextualMenuProps } from '@fluentui/react';
+import { ISharingResult } from '@pnp/sp/sharing';
 
 export interface ISharingListState {
     files: ISharingResult[];
