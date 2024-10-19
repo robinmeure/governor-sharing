@@ -21,6 +21,7 @@ import { IPropertyPaneConfiguration, PropertyPaneToggle } from '@microsoft/sp-pr
 import { ISharingWebPartContext } from './model';
 import { SharingWebPartContext } from './hooks/SharingWebPartContext';
 import SharingApp from './components/SharingApp';
+import { getSP } from '../../common/config/PnPjsConfig';
 
 const LOG_SOURCE: string = 'Microsoft-Governance-Sharing';
 
@@ -46,6 +47,7 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     // telemetry.optOut();
 
     // loading the data provider to get access to the REST/Search API
+    getSP(this.context);
     this.dataProvider = new DataProvider(this.context);
   }
 
