@@ -9,13 +9,13 @@ import { FileIconType, getFileTypeIconProps } from '@fluentui/react-file-type-ic
 import ISharingResult from '../SharingView/ISharingResult';
 import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
-import { useDataProvider } from '../../../../services/useDataProvider';
+import { useDataProvider } from '../../../../common/services/useDataProvider';
 import { Pagination } from '@pnp/spfx-controls-react';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
     const governContext = useContext(SharingWebPartContext);
-    const { loadAssociatedGroups, getSharingLinks, getSearchResults } = useDataProvider();
+    const { loadAssociatedGroups, getSharingLinks, getSearchResults } = useDataProvider(governContext.webpartContext);
 
     const [sharedFiles, setSharedFiles] = useState<ISharingResult[]>([]);
     const [fileIds, setFileIds] = useState<string[]>([]);

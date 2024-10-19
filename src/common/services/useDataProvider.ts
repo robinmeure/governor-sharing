@@ -1,20 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { spfi, SPFx } from '@pnp/sp';
+import { SPFI, spfi } from '@pnp/sp';
 import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
 import "@pnp/sp/site-users/web";
 import "@pnp/sp/files/web";
-import "@pnp/sp/items/get-all";
-import { Logger, LogLevel, PnPLogging } from '@pnp/logging';
+import "@pnp/sp/site-groups/web";
+import "@pnp/graph/search";
+import { Logger, LogLevel } from '@pnp/logging';
 import { Caching } from '@pnp/queryable';
-import ISharingResult from '../webparts/sharing/components/SharingView/ISharingResult';
-import { graphfi, graphGet, GraphQueryable, SPFx as graphSPFx } from '@pnp/graph';
+import ISharingResult from '../../webparts/sharing/components/SharingView/ISharingResult';
+import { GraphFI, graphfi } from '@pnp/graph';
 import { IFacepilePersona } from '@fluentui/react';
-import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from '../common/utils/Utils';
-import { useContext, useState } from 'react';
-import { ISearchResultExtended } from '../webparts/sharing/components/SharingView/ISearchResultExtended';
-import { SharingWebPartContext } from '../webparts/sharing/hooks/SharingWebPartContext';
+import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from '../utils/Utils';
+import { useState } from 'react';
+import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
+import { getGraph, getSP } from '../config/PnPjsConfig';
+import { WebPartContext } from '@microsoft/sp-webpart-base';
 
 interface IDataProvider {
     getSharingLinks(listItems: Record<string, any>): Promise<ISharingResult[]>;
@@ -24,31 +26,40 @@ interface IDataProvider {
 /** Represents all calls to SharePoint with help of Graph API
  * @param {WebPartContext} webpartContext - is used to make Graph API calls
  */
-export const useDataProvider = (): IDataProvider => {
 
-    const { webpartContext } = useContext(SharingWebPartContext);
+//TODO remove webpartContext as param
+export const useDataProvider = (webpartContext: WebPartContext): IDataProvider => {
+
+    const _sp: SPFI = getSP();
+    const _graph: GraphFI = getGraph();
 
 
     const [standardGroups, setStandardGroups] = useState<string[]>([]);
 
+    const getCacheFI = <T extends "SP" | "Graph">(type: T): T extends "SP" ? SPFI : GraphFI => {
+        const cache = type === "SP" ? spfi(_sp) : graphfi(_graph);
+        return cache.using(Caching({ store: "session" })) as T extends "SP" ? SPFI : GraphFI;
+    }
+
+
     const loadAssociatedGroups = async (siteUrl?: string): Promise<void> => {
 
         try {
-            const sp = spfi(siteUrl).using(SPFx(webpartContext), Caching);
-            const { Title } = await sp.web.select("Title")()
+            const spCache = getCacheFI("SP");
+            const { Title } = await spCache.web.select("Title")();
             console.log(`Web title: ${Title}`);
             const locStandardGroups: string[] = [];
 
             // Gets the associated visitors group of a web
-            const visitorsGroup = await sp.web.associatedVisitorGroup.select("Title")();
+            const visitorsGroup = await spCache.web.associatedVisitorGroup.select("Title")();
             locStandardGroups.push(visitorsGroup.Title);
 
             // Gets the associated members group of a web
-            const membersGroup = await sp.web.associatedMemberGroup.select("Title")();
+            const membersGroup = await spCache.web.associatedMemberGroup.select("Title")();
             locStandardGroups.push(membersGroup.Title);
 
             // Gets the associated owners group of a web
-            const ownersGroup = await sp.web.associatedOwnerGroup.select("Title")();
+            const ownersGroup = await spCache.web.associatedOwnerGroup.select("Title")();
             locStandardGroups.push(ownersGroup.Title);
             console.log("FazLog ~ loadAssociatedGroups ~ locStandardGroups:", locStandardGroups);
             setStandardGroups(locStandardGroups);
@@ -63,7 +74,7 @@ export const useDataProvider = (): IDataProvider => {
         if (page === 0) {
             searchResults = [];
         }
-        const graph = graphfi().using(graphSPFx(webpartContext), Caching).using(PnPLogging(LogLevel.Warning));
+        const graphCache = getCacheFI("Graph");
         const tenantId = webpartContext.pageContext.aadInfo.tenantId;
         const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
         let siteUrl = webpartContext.pageContext.web.absoluteUrl;
@@ -83,7 +94,7 @@ export const useDataProvider = (): IDataProvider => {
             : `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${siteUrl})`
 
         Logger.write(`Issuing search query: ${query}`, LogLevel.Verbose);
-        const results = await graph.query({
+        const results = await graphCache.query({
             entityTypes: ["driveItem", "listItem"],
             query: {
                 queryString: `${query}`
@@ -141,51 +152,55 @@ export const useDataProvider = (): IDataProvider => {
         return listItems;
     }
 
+    // const getDriveItemsBySearchResult = async (listItems: Record<string, any>): Promise<Record<string, any>> => {
+    //     try {
+    //         console.log("FazLog ~ getDriveItemsBySearchResult ~ listItems:", listItems);
+    //         const graph = graphfi().using(graphSPFx(webpartContext), Caching).using(PnPLogging(LogLevel.Warning));
+    //         const driveItems: Record<string, any> = {};
+
+    //         //TODO enable caching for PRD
+    //         // const [batchedGraph, execute] = graph.batched();
+    //         // batchedGraph.using(Caching());
+
+    //         // // for each file, we need to get the permissions
+    //         // // eslint-disable-next-line guard-for-in
+    //         // for (const fileId in listItems) {
+    //         //     const file = listItems[fileId];
+    //         //     // the permissions endpoint on the driveItem is not (yet?) exposed in pnpjs, so we need to use the graphQueryable
+    //         //     const driveItemQuery = batchedGraph.drives.getById(file.DriveId).getItemById(file.DriveItemId);
+    //         //     // adding the permissions endpoint
+    //         //     const graphQueryable = GraphQueryable(driveItemQuery, "permissions")
+    //         //     // getting the permissions and adding the request to the batch
+    //         //     const r = await graphGet(GraphQueryable(graphQueryable));
+    //         //     driveItems[fileId] = r;
+    //         // }
+    //         // // Executes the batched calls
+    //         // await execute();
+
+    //         return driveItems;
+    //     } catch (error) {
+    //         console.log("FazLog ~ getDriveItemsBySearchResult ~ error:", error);
+
+    //     }
+    // }
+
     const getDriveItemsBySearchResult = async (listItems: Record<string, any>): Promise<Record<string, any>> => {
         try {
             console.log("FazLog ~ getDriveItemsBySearchResult ~ listItems:", listItems);
-            const graph = graphfi().using(graphSPFx(webpartContext), Caching).using(PnPLogging(LogLevel.Warning));
             const driveItems: Record<string, any> = {};
 
-            const [batchedGraph, execute] = graph.batched();
-            batchedGraph.using(Caching());
+            const clientV3 = await webpartContext.msGraphClientFactory
+                .getClient('3');
 
-            //TODO remove without batching
             for (const fileId in listItems) {
-                if (fileId) {
+                if (Object.prototype.hasOwnProperty.call(listItems, fileId)) {
                     const file = listItems[fileId];
-                    const driveItemQuery = batchedGraph.drives.getById(file.DriveId).getItemById(file.DriveItemId);
-                    const graphQueryable = GraphQueryable(driveItemQuery, "permissions")
-
-                    try {
-                        const r = await graphGet(GraphQueryable(graphQueryable));
-                        driveItems[fileId] = r;
-                    } catch (error) {
-                        console.log("FazLog ~ getDriveItemsBySearchResult ~ error:", error);
-                    }
+                    const res = await clientV3.api(`/drives/${file.DriveId}/items/${file.DriveItemId}/permissions`).get();
+                    console.log("FazLog ~ getDriveItemsBySearchResult ~ res:", res);
+                    // const r = await graphGet(GraphQueryable(graphQueryable));
+                    // driveItems[fileId] = r;
                 }
             }
-            await execute();
-
-            //TODO enable caching for PRD
-            // const [batchedGraph, execute] = graph.batched();
-            // batchedGraph.using(Caching());
-
-            // // for each file, we need to get the permissions
-            // // eslint-disable-next-line guard-for-in
-            // for (const fileId in listItems) {
-            //     const file = listItems[fileId];
-            //     // the permissions endpoint on the driveItem is not (yet?) exposed in pnpjs, so we need to use the graphQueryable
-            //     const driveItemQuery = batchedGraph.drives.getById(file.DriveId).getItemById(file.DriveItemId);
-            //     // adding the permissions endpoint
-            //     const graphQueryable = GraphQueryable(driveItemQuery, "permissions")
-            //     // getting the permissions and adding the request to the batch
-            //     const r = await graphGet(GraphQueryable(graphQueryable));
-            //     driveItems[fileId] = r;
-            // }
-            // // Executes the batched calls
-            // await execute();
-
             return driveItems;
         } catch (error) {
             console.log("FazLog ~ getDriveItemsBySearchResult ~ error:", error);

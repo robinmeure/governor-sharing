@@ -3,13 +3,7 @@ import * as React from 'react'
 import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
-import "@pnp/graph/groups";
-
 import { initializeIcons } from '@fluentui/react/lib/Icons';
-import "@pnp/sp/webs";
-import "@pnp/sp/search";
-import IDataProvider from './components/SharingView/DataProvider';
-import DataProvider from './components/SharingView/DataProvider';
 import { initializeFileTypeIcons } from '@fluentui/react-file-type-icons';
 
 import {
@@ -31,7 +25,6 @@ export interface ISharingWebPartProps {
 }
 
 export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPartProps> {
-  private dataProvider: IDataProvider;
 
   protected async onInit(): Promise<void> {
     // load the filetype icons and other icons
@@ -48,15 +41,13 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
 
     // loading the data provider to get access to the REST/Search API
     getSP(this.context);
-    this.dataProvider = new DataProvider(this.context);
   }
 
   public render(): void {
     const sharingWebPartContextValue: ISharingWebPartContext = {
       pageLimit: 15,
       webpartContext: this.context,
-      isTeams: this.context.sdks.microsoftTeams ? true : false,
-      dataProvider: this.dataProvider
+      isTeams: this.context.sdks.microsoftTeams ? true : false
     };
     console.log("FazLog ~ SharingWebPart ~ render ~ sharingWebPartContextValue:", sharingWebPartContextValue);
 
