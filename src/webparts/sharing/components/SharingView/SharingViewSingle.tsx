@@ -27,7 +27,7 @@ import * as React from 'react';
 import { ISharingResult } from "./ISharingResult";
 import { ISharingViewProps } from './ISharingViewProps';
 import ISharingViewState from './ISharingViewState';
-import { genericSort, textSort } from './Utils';
+import { genericSort, textSort } from '../../../../common/utils/Utils';
 
 export default class SharingViewSingle extends React.Component<ISharingViewProps, ISharingViewState> {
   private columns: IColumn[];
@@ -342,8 +342,6 @@ export default class SharingViewSingle extends React.Component<ISharingViewProps
 
   public render(): React.ReactElement<ISharingViewProps> {
     const { currentPage, totalPages, files, loadingComplete, statusMessage } = this.state;
-    console.log("FazLog ~ SharingViewSingle ~ render ~ files:", files);
-
     return (
       <ThemeProvider>
         <EnhancedThemeProvider context={this.props.context}>

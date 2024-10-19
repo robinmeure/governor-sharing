@@ -56,6 +56,7 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
       isTeams: this.context.sdks.microsoftTeams ? true : false,
       dataProvider: this.dataProvider
     };
+    console.log("FazLog ~ SharingWebPart ~ render ~ sharingWebPartContextValue:", sharingWebPartContextValue);
 
     // Put the context value with Provider
     const element: React.ReactElement = React.createElement(
@@ -76,7 +77,7 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     //   {
     //     pageLimit: 15,
     //     context: this.context,
-    //     isTeams: isTeams,
+    //     isTeams: false,
     //     dataProvider: this.dataProvider
     //   }
     // );

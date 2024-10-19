@@ -16,7 +16,7 @@ import "@pnp/sp/search";
 import "@pnp/sp/sharing";
 import "@pnp/sp/webs";
 import { ISharingResult } from "./ISharingResult";
-import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from "./Utils";
+import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from "../../../../common/utils/Utils";
 
 export default interface IDataProvider {
   getSharingLinks(listItems: Record<string, any>): Promise<ISharingResult[]>;
@@ -81,6 +81,9 @@ export default class DataProvider implements IDataProvider {
     // eslint-disable-next-line guard-for-in
     for (const fileId in listItems) {
       const file = listItems[fileId];
+
+
+
       // the permissions endpoint on the driveItem is not (yet?) exposed in pnpjs, so we need to use the graphQueryable
       const driveItemQuery = batchedGraph.drives.getById(file.DriveId).getItemById(file.DriveItemId);
       // adding the permissions endpoint
@@ -235,7 +238,7 @@ export default class DataProvider implements IDataProvider {
     searchResults.forEach(results => {
       results.forEach(result => {
         result.hitsContainers.forEach(hits => {
-          hits.hits.forEach(hit => {
+          hits?.hits?.forEach(hit => {
             const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER !== undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
 
             // if we don't get a driveId back (e.g. documentlibrary), then skip the returned item

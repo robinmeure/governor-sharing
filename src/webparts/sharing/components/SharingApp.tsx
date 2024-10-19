@@ -4,7 +4,6 @@ import SharingList from './SharingList/SharingList';
 const SharingApp: React.FC = (): JSX.Element => {
 
     return <>
-        TEST
         <SharingList />
     </>;
 };
