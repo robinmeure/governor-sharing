@@ -1,22 +1,26 @@
-// /* eslint-disable @typescript-eslint/no-explicit-any */
-// import { spfi, SPFx } from '@pnp/sp';
+// /* eslint-disable */
+// import { SPFI, spfi } from '@pnp/sp';
 // import "@pnp/sp/webs";
 // import "@pnp/sp/lists";
 // import "@pnp/sp/items";
 // import "@pnp/sp/site-users/web";
 // import "@pnp/sp/files/web";
-// import "@pnp/sp/items/get-all";
-// import { Logger, LogLevel, PnPLogging } from '@pnp/logging';
+// import "@pnp/sp/site-groups/web";
+// import "@pnp/graph/search";
+// import { Logger, LogLevel } from '@pnp/logging';
 // import { Caching } from '@pnp/queryable';
-// import ISharingResult from '../webparts/sharing/components/SharingView/ISharingResult';
-// import { graphfi, graphGet, GraphQueryable, SPFx as graphSPFx } from '@pnp/graph';
+// import ISharingResult from '../../webparts/sharing/components/SharingView/ISharingResult';
+// import { GraphFI, graphfi } from '@pnp/graph';
 // import { IFacepilePersona } from '@fluentui/react';
-// import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from '../common/utils/Utils';
-// import { useContext, useState } from 'react';
-// import { ISearchResultExtended } from '../webparts/sharing/components/SharingView/ISearchResultExtended';
-// import { SharingWebPartContext } from '../webparts/sharing/hooks/SharingWebPartContext';
+// import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from '../utils/Utils';
+// import { useState } from 'react';
+// import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
+// import { getGraph, getSP } from '../config/PnPjsConfig';
+// import { WebPartContext } from '@microsoft/sp-webpart-base';
+// import { BatchRequestContent, BatchRequestStep, BatchResponseContent } from '@microsoft/microsoft-graph-client';
+// import { Drive, Permission } from '@microsoft/microsoft-graph-types';
 
-// interface IDataProvider {
+// interface IPnPService {
 //     getSharingLinks(listItems: Record<string, any>): Promise<ISharingResult[]>;
 //     getSearchResults(): Promise<Record<string, any>>;
 //     loadAssociatedGroups(siteUrl?: string): Promise<void>;
@@ -24,37 +28,45 @@
 // /** Represents all calls to SharePoint with help of Graph API
 //  * @param {WebPartContext} webpartContext - is used to make Graph API calls
 //  */
-// export const useDataProvider = (): IDataProvider => {
 
-//     const { webpartContext } = useContext(SharingWebPartContext);
+// export const usePnPService = (webpartContext: WebPartContext): IPnPService => {
+
+//     const _sp: SPFI = getSP(webpartContext);
+//     const _graph: GraphFI = getGraph(webpartContext);
 
 
 //     const [standardGroups, setStandardGroups] = useState<string[]>([]);
 
+//     const getCacheFI = <T extends "SP" | "Graph">(type: T): T extends "SP" ? SPFI : GraphFI => {
+//         const cache = type === "SP" ? spfi(_sp) : graphfi(_graph);
+//         return cache.using(Caching({ store: "session" })) as T extends "SP" ? SPFI : GraphFI;
+//     }
+
+
 //     const loadAssociatedGroups = async (siteUrl?: string): Promise<void> => {
 
 //         try {
-//             const sp = spfi(siteUrl).using(SPFx(webpartContext), Caching);
-//             const { Title } = await sp.web.select("Title")()
+//             const spCache = getCacheFI("SP");
+//             const { Title } = await spCache.web.select("Title")();
 //             console.log(`Web title: ${Title}`);
 //             const locStandardGroups: string[] = [];
 
 //             // Gets the associated visitors group of a web
-//             const visitorsGroup = await sp.web.associatedVisitorGroup.select("Title")();
+//             const visitorsGroup = await spCache.web.associatedVisitorGroup.select("Title")();
 //             locStandardGroups.push(visitorsGroup.Title);
 
 //             // Gets the associated members group of a web
-//             const membersGroup = await sp.web.associatedMemberGroup.select("Title")();
+//             const membersGroup = await spCache.web.associatedMemberGroup.select("Title")();
 //             locStandardGroups.push(membersGroup.Title);
 
 //             // Gets the associated owners group of a web
-//             const ownersGroup = await sp.web.associatedOwnerGroup.select("Title")();
+//             const ownersGroup = await spCache.web.associatedOwnerGroup.select("Title")();
 //             locStandardGroups.push(ownersGroup.Title);
 //             console.log("FazLog ~ loadAssociatedGroups ~ locStandardGroups:", locStandardGroups);
 //             setStandardGroups(locStandardGroups);
 //         }
 //         catch (error) {
-//             Logger.write(`loadAssociatedGroups in useDataProvider | Error: ${error}`, LogLevel.Error);
+//             Logger.write(`loadAssociatedGroups in usePnPService | Error: ${error}`, LogLevel.Error);
 //             throw error;
 //         }
 //     };
@@ -63,9 +75,12 @@
 //         if (page === 0) {
 //             searchResults = [];
 //         }
-//         const graph = graphfi().using(graphSPFx(webpartContext), Caching).using(PnPLogging(LogLevel.Warning));
+//         const graphCache = getCacheFI("Graph");
 //         const tenantId = webpartContext.pageContext.aadInfo.tenantId;
 //         const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
+//         let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+
+
 //         let siteUrl = webpartContext.pageContext.web.absoluteUrl;
 //         let isTeams: boolean, isPrivateChannel = false;
 //         let groupId = "";
@@ -76,14 +91,12 @@
 //             isPrivateChannel = (webpartContext.sdks.microsoftTeams.context.channelType === "Private");
 //             groupId = webpartContext.sdks.microsoftTeams.context.groupId;
 //             siteUrl = webpartContext.sdks.microsoftTeams.context.teamSiteUrl;
+//             if (!isPrivateChannel)
+//                 query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`;
 //         }
 
-//         const query = (isTeams && !isPrivateChannel) ?
-//             `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`
-//             : `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (SPSiteUrl:${siteUrl})`
-
 //         Logger.write(`Issuing search query: ${query}`, LogLevel.Verbose);
-//         const results = await graph.query({
+//         const results = await graphCache.query({
 //             entityTypes: ["driveItem", "listItem"],
 //             query: {
 //                 queryString: `${query}`
@@ -144,52 +157,57 @@
 //     const getDriveItemsBySearchResult = async (listItems: Record<string, any>): Promise<Record<string, any>> => {
 //         try {
 //             console.log("FazLog ~ getDriveItemsBySearchResult ~ listItems:", listItems);
-//             const graph = graphfi().using(graphSPFx(webpartContext), Caching).using(PnPLogging(LogLevel.Warning));
 //             const driveItems: Record<string, any> = {};
 
-//             const [batchedGraph, execute] = graph.batched();
-//             batchedGraph.using(Caching());
+//             const graphClient = await webpartContext.msGraphClientFactory
+//                 .getClient('3');
 
-//             //TODO remove without batching
+//             // for (const fileId in listItems) {
+//             //     if (Object.prototype.hasOwnProperty.call(listItems, fileId)) {
+//             //         const file = listItems[fileId];
+//             //         const res = await clientV3.api(`/drives/${file.DriveId}/items/${file.DriveItemId}/permissions`).get();
+//             //         console.log("FazLog ~ getDriveItemsBySearchResult ~ res:", res);
+//             //         // const r = await graphGet(GraphQueryable(graphQueryable));
+//             //         driveItems[fileId] = res?.value;
+//             //     }
+//             // }
+//             // return driveItems;
+
+//             const batchReq: BatchRequestStep[] = [];
 //             for (const fileId in listItems) {
-//                 if (fileId) {
+//                 if (Object.prototype.hasOwnProperty.call(listItems, fileId)) {
 //                     const file = listItems[fileId];
-//                     const driveItemQuery = batchedGraph.drives.getById(file.DriveId).getItemById(file.DriveItemId);
-//                     const graphQueryable = GraphQueryable(driveItemQuery, "permissions")
+//                     batchReq.push({
+//                         id: fileId,
+//                         request: new Request(`https://graph.microsoft.com/drives/${file.DriveId}/items/${file.DriveItemId}/permissions`, {
+//                             method: "GET"
+//                         })
+//                     });
+//                 }
+//             }
 
-//                     try {
-//                         const r = await graphGet(GraphQueryable(graphQueryable));
-//                         driveItems[fileId] = r;
-//                     } catch (error) {
-//                         console.log("FazLog ~ getDriveItemsBySearchResult ~ error:", error);
+//             const batchRequestContent = new BatchRequestContent(batchReq);
+//             const content = await batchRequestContent.getContent();
+
+//             // POST the batch request content to the /$batch endpoint
+//             const batchResponse = await graphClient.api('/$batch').post(content);
+
+//             // Create a BatchResponseContent object to parse the response
+//             const batchResponseContent = new BatchResponseContent(batchResponse);
+//             const res = batchResponseContent.getResponses();
+
+//             for (const fileId in listItems) {
+//                 if (Object.prototype.hasOwnProperty.call(listItems, fileId)) {
+//                     const driveResponse = batchResponseContent.getResponseById(fileId);
+//                     if (driveResponse.ok) {
+//                         const drivePermissionItem: Permission = (await driveResponse.json())?.value as Permission;
+//                         driveItems[fileId] = drivePermissionItem;
 //                     }
 //                 }
 //             }
-//             await execute();
-
-//             //TODO enable caching for PRD
-//             // const [batchedGraph, execute] = graph.batched();
-//             // batchedGraph.using(Caching());
-
-//             // // for each file, we need to get the permissions
-//             // // eslint-disable-next-line guard-for-in
-//             // for (const fileId in listItems) {
-//             //     const file = listItems[fileId];
-//             //     // the permissions endpoint on the driveItem is not (yet?) exposed in pnpjs, so we need to use the graphQueryable
-//             //     const driveItemQuery = batchedGraph.drives.getById(file.DriveId).getItemById(file.DriveItemId);
-//             //     // adding the permissions endpoint
-//             //     const graphQueryable = GraphQueryable(driveItemQuery, "permissions")
-//             //     // getting the permissions and adding the request to the batch
-//             //     const r = await graphGet(GraphQueryable(graphQueryable));
-//             //     driveItems[fileId] = r;
-//             // }
-//             // // Executes the batched calls
-//             // await execute();
-
 //             return driveItems;
 //         } catch (error) {
 //             console.log("FazLog ~ getDriveItemsBySearchResult ~ error:", error);
-
 //         }
 //     }
 
@@ -307,7 +325,7 @@
 //                 // building up the result to be returned
 //                 const sharedResult: ISharingResult =
 //                 {
-//                     FileExtension: (file.FileExtension === null) ? "folder" : file.FileExtension,
+//                     FileExtension: file?.FileExtension ? file.FileExtension : "folder",
 //                     FileName: file.FileName,
 //                     Channel: file.FolderName,
 //                     LastModified: file.LastModifiedTime,

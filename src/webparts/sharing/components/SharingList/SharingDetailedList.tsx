@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
+/* eslint-disable */
 
 import { Facepile, IColumn, Icon, Link, OverflowButtonType, Persona, Text, PersonaSize, ShimmeredDetailsList, TooltipHost, SelectionMode } from '@fluentui/react';
 import * as React from 'react'
@@ -9,17 +7,23 @@ import { FileIconType, getFileTypeIconProps } from '@fluentui/react-file-type-ic
 import ISharingResult from '../SharingView/ISharingResult';
 import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
-import { useDataProvider } from '../../../../common/services/useDataProvider';
+import { usePnPService } from '../../../../common/services/usePnPService';
 import { Pagination } from '@pnp/spfx-controls-react';
+import { SearchQueryGeneratorForDocs } from '../../../../common/utils/Utils';
+import { SearchRequest } from '@microsoft/microsoft-graph-types';
+import { _CONST } from '../../../../common/utils/Const';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
     const governContext = useContext(SharingWebPartContext);
-    const { loadAssociatedGroups, getSharingLinks, getSearchResults } = useDataProvider(governContext.webpartContext);
+    const { getSiteGroups,
+        // getSharingLinks, 
+        // getSearchResults,
+        getDocsByGraphSearch
+    } = usePnPService(governContext.webpartContext);
 
     const [sharedFiles, setSharedFiles] = useState<ISharingResult[]>([]);
     const [fileIds, setFileIds] = useState<string[]>([]);
-    // const [searchItems, setSearchItems] = useState<Record<string, any>>([]);
     let searchItems: Record<string, any> = [];
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [totalPages, setTotalPages] = useState<number>(1);
@@ -31,6 +35,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             // setting these to be empty because of the pagination, 
             // otherwise in the pagination items will be added to the existing array
             const sharingLinks: ISharingResult[] = [];
+            console.log("FazLog ~ locFieldIds.forEach ~ searchItems:", searchItems);
 
             const paginatedListItems: Record<string, any> = {};
             locFieldIds.forEach((fileId) => {
@@ -40,16 +45,16 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
             // getting the sharing links using expensive REST API calls based on the given list of Id's 
             console.log("FazLog ~ const_processSharingLinks= ~ paginatedListItems:", paginatedListItems);
-            const sharedLinkResults = await getSharingLinks(paginatedListItems);
-            if (sharedLinkResults === null)
-                return;
+            // const sharedLinkResults = await getSharingLinks(paginatedListItems);
+            // if (sharedLinkResults === null)
+            //     return;
 
-            sharedLinkResults.forEach((sharedResult) => {
-                if (sharedResult.SharedWith === null)
-                    return;
+            // sharedLinkResults.forEach((sharedResult) => {
+            //     if (sharedResult.SharedWith === null)
+            //         return;
 
-                sharingLinks.push(sharedResult)
-            });
+            //     sharingLinks.push(sharedResult)
+            // });
 
             return (sharingLinks);
         } catch (error) {
@@ -77,6 +82,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
 
             const locSharedFiles: ISharingResult[] = await _processSharingLinks(paginatedItems);
+            console.log("FazLog ~ loadPage ~ locSharedFiles:", locSharedFiles);
             setSharedFiles(locSharedFiles);
 
 
@@ -89,23 +95,34 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
     useEffect(() => {
         const init = async (): Promise<void> => {
-            await loadAssociatedGroups();
-
             try {
-                const locSearchItems = await getSearchResults();
+                const groups = await getSiteGroups();
+                console.log("FazLog ~ init ~ groups:", groups);
+
+                const searchReqForDocs: SearchRequest = {
+                    entityTypes: ["driveItem", "listItem"],
+                    query: {
+                        queryString: `${SearchQueryGeneratorForDocs(governContext.webpartContext)}`
+                    },
+                    fields: _CONST.DocsSearch.Fields,
+                    from: 0,
+                    size: 500
+                }
+
+                const locSearchItems = await getDocsByGraphSearch(searchReqForDocs);
                 console.log("FazLog ~ init ~ locSearchItems:", locSearchItems);
-                searchItems = locSearchItems;
-                // setSearchItems(locSearchItems);
-                const locFileIds = Object.keys(locSearchItems);
-                setFileIds(locFileIds);
-                setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-                await loadPage(currentPage, locFileIds);
+                // console.log("FazLog ~ init ~ locSearchItems:", locSearchItems);
+                // searchItems = locSearchItems;
+                // const locFileIds = Object.keys(locSearchItems);
+                // setFileIds(locFileIds);
+                // setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
+                // await loadPage(currentPage, locFileIds);
 
             } catch (error) {
                 console.log("FazLog ~ init ~ error:", error);
             }
         };
-        init().catch((error) => console.error(error));
+        init();
     }, []);
 
     const columns = [
@@ -237,9 +254,9 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         <div>
 
             <ShimmeredDetailsList
-                usePageCache={true}
+                // usePageCache={true}
                 columns={columns}
-                enableShimmer={(!loading)}
+                // enableShimmer={(!loading)}
                 items={sharedFiles}
                 // selection={this.selection}
                 // onItemInvoked={this._handleItemInvoked}

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/typedef */
+/* eslint-disable */
 import * as React from 'react'
 import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
@@ -15,7 +15,6 @@ import { IPropertyPaneConfiguration, PropertyPaneToggle } from '@microsoft/sp-pr
 import { ISharingWebPartContext } from './model';
 import { SharingWebPartContext } from './hooks/SharingWebPartContext';
 import SharingApp from './components/SharingApp';
-import { getSP } from '../../common/config/PnPjsConfig';
 
 const LOG_SOURCE: string = 'Microsoft-Governance-Sharing';
 
@@ -38,9 +37,6 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     // if you don't want to send telemetry data to PnP, you can opt-out here (see https://github.com/pnp/telemetry-js for details on what is being sent)
     // const telemetry = PnPTelemetry.getInstance();
     // telemetry.optOut();
-
-    // loading the data provider to get access to the REST/Search API
-    getSP(this.context);
   }
 
   public render(): void {
@@ -60,7 +56,6 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
       React.createElement(SharingApp)
     );
 
-    // eslint-disable-next-line @microsoft/spfx/pair-react-dom-render-unmount
     ReactDom.render(element, this.domElement);
 
 

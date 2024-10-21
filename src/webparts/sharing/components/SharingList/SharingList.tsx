@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable */
 
 import * as React from 'react';
 import { IContextualMenuProps } from '@fluentui/react';

@@ -1,9 +1,10 @@
-/* eslint-disable dot-notation */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable */
 
 import { IColumn, IContextualMenuItem, IFacepilePersona } from '@fluentui/react';
-import { IdentitySet } from '@microsoft/microsoft-graph-types';
+import { IdentitySet, SearchResponse } from '@microsoft/microsoft-graph-types';
 import { isEqual } from '@microsoft/sp-lodash-subset';
+import { WebPartContext } from '@microsoft/sp-webpart-base';
+import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
 
 // need to rework this sorting method to be a) working with dates and b) be case insensitive
 export function genericSort<T>(items: T[], columnKey: string, isSortedDescending?: boolean): T[] {
@@ -73,7 +74,7 @@ export function convertToGraphUserFromLinkKind(linkKind: number): microsoftgraph
 }
 
 export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePersona {
-  if (user["siteUser"] !== null) {
+  if (user["siteUser"]) {
     const siteUser = user["siteUser"];
     const _user: IFacepilePersona =
     {
@@ -83,7 +84,7 @@ export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePerson
     };
     return _user;
   }
-  else if (user["siteGroup"] !== null) {
+  else if (user["siteGroup"]) {
     const siteGroup = user["siteGroup"];
     const _user: IFacepilePersona =
     {
@@ -226,4 +227,71 @@ export function processUsers(users: string): IFacepilePersona[] {
     _users.push(user)
   }
   return _users;
+}
+
+
+export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => {
+  try {
+    const tenantId = context.pageContext.aadInfo.tenantId;
+    const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
+    let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+
+
+    let siteUrl = context.pageContext.web.absoluteUrl;
+    let isTeams: boolean, isPrivateChannel = false;
+    let groupId = "";
+    if (context.sdks.microsoftTeams) {
+      isTeams = true;
+    }
+    if (isTeams) {
+      isPrivateChannel = (context.sdks.microsoftTeams.context.channelType === "Private");
+      groupId = context.sdks.microsoftTeams.context.groupId;
+      siteUrl = context.sdks.microsoftTeams.context.teamSiteUrl;
+      if (!isPrivateChannel)
+        query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`;
+    }
+
+    return query;
+  } catch (error) {
+    console.log("FazLog ~ SearchQueryGeneratorForDocs ~ error:", error);
+    throw error;
+  }
+}
+
+
+export const SearchResultMapper = (searchResponse: SearchResponse[]): ISearchResultExtended[] => {
+
+  try {
+    const locSearchResultExtended: ISearchResultExtended[] = [];
+    searchResponse.forEach(results => {
+      results.hitsContainers.forEach(hits => {
+        hits?.hits?.forEach((hit: any) => {
+          const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER !== undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
+
+          // if we don't get a driveId back (e.g. documentlibrary), then skip the returned item
+          if (hit.resource.listItem.fields.driveId === undefined)
+            return;
+
+          const result: ISearchResultExtended = {
+            DriveItemId: hit.resource.id,
+            FileName: hit.resource.listItem.fields.fileName,
+            FileExtension: hit.resource.listItem.fields.fileExtension ? hit.resource.listItem.fields.fileExtension : "folder",
+            ListId: hit.resource.listItem.fields.listId,
+            FileId: hit.resource.listItem.id,
+            DriveId: hit.resource.listItem.fields.driveId,
+            ListItemId: hit.resource.listItem.fields.listItemId,
+            Path: hit.resource.webUrl,
+            LastModifiedTime: hit.resource.lastModifiedDateTime,
+            SharedWithUsersOWSUSER: SharedWithUsersOWSUser,
+            SiteUrl: hit.resource.listItem.fields.spSiteUrl
+          }
+          locSearchResultExtended.push(result);
+        });
+      });
+    });
+    return locSearchResultExtended;
+  } catch (error) {
+    console.log("FazLog ~ SearchResultMapper ~ error:", error);
+    throw error;
+  }
 }
