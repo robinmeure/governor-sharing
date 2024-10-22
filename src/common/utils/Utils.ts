@@ -1,10 +1,11 @@
 /* eslint-disable */
 
 import { IColumn, IContextualMenuItem, IFacepilePersona } from '@fluentui/react';
-import { IdentitySet, SearchResponse } from '@microsoft/microsoft-graph-types';
+import { IdentitySet, SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
 import { isEqual } from '@microsoft/sp-lodash-subset';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
+import { _CONST } from './Const';
 
 // need to rework this sorting method to be a) working with dates and b) be case insensitive
 export function genericSort<T>(items: T[], columnKey: string, isSortedDescending?: boolean): T[] {
@@ -249,6 +250,28 @@ export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => 
       siteUrl = context.sdks.microsoftTeams.context.teamSiteUrl;
       if (!isPrivateChannel)
         query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`;
+    }
+
+    return query;
+  } catch (error) {
+    console.log("FazLog ~ SearchQueryGeneratorForDocs ~ error:", error);
+    throw error;
+  }
+}
+
+export const SearchRequestGeneratorForSites = (): SearchRequest => {
+  try {
+    let query = `*`;
+
+
+    const searchReqForDocs: SearchRequest = {
+      entityTypes: ["driveItem", "listItem"],
+      query: {
+        queryString: query
+      },
+      fields: _CONST.DocsSearch.Fields,
+      from: 0,
+      size: 500
     }
 
     return query;

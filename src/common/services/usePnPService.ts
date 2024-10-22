@@ -19,12 +19,13 @@ import { ISearchResultExtended } from '../../webparts/sharing/components/Sharing
 import { getGraph, getSP } from '../config/PnPjsConfig';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { BatchRequestContent, BatchRequestStep, BatchResponseContent } from '@microsoft/microsoft-graph-client';
-import { Drive, Permission, SearchRequest } from '@microsoft/microsoft-graph-types';
+import { Drive, Permission, SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
 
 interface IPnPService {
     // getSharingLinks(listItems: Record<string, any>): Promise<ISharingResult[]>;
     // getSearchResults(): Promise<Record<string, any>>;
     getDocsByGraphSearch(searchReq: SearchRequest): Promise<ISearchResultExtended[]>;
+    getByGraphSearch(searchReq: SearchRequest): Promise<SearchResponse[]>;
     getSiteGroups(): Promise<string[]>;
 }
 /** Represents all calls to SharePoint with help of Graph API
@@ -113,6 +114,20 @@ export const usePnPService = (webpartContext: WebPartContext | ApplicationCustom
 
     //     return searchResults;
     // }
+
+    const getByGraphSearch = async (searchReq: SearchRequest): Promise<SearchResponse[]> => {
+        try {
+            const locSearchResponse: SearchResponse[] = [];
+            const graphCache = getCacheFI("Graph");
+
+            Logger.write(`Issuing search query: ${searchReq.query.queryString}`, LogLevel.Verbose);
+            const response = await graphCache.query(searchReq);
+            return response;
+        } catch (error) {
+            console.log("FazLog ~ getDocsByGraphSearch ~ error:", error);
+            throw error;
+        }
+    }
 
     const getDocsByGraphSearch = async (searchReq: SearchRequest): Promise<ISearchResultExtended[]> => {
         try {
@@ -361,6 +376,7 @@ export const usePnPService = (webpartContext: WebPartContext | ApplicationCustom
         // getSharingLinks,
         // getSearchResults,
         getSiteGroups,
-        getDocsByGraphSearch
+        getDocsByGraphSearch,
+        getByGraphSearch
     };
 };
