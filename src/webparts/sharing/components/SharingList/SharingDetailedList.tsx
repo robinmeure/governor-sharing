@@ -4,28 +4,26 @@ import { Facepile, IColumn, Icon, Link, OverflowButtonType, Persona, Text, Perso
 import * as React from 'react'
 import * as moment from 'moment';
 import { FileIconType, getFileTypeIconProps } from '@fluentui/react-file-type-icons';
-import ISharingResult from '../SharingView/ISharingResult';
 import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
 import { usePnPService } from '../../../../common/services/usePnPService';
 import { Pagination } from '@pnp/spfx-controls-react';
-import { SearchQueryGeneratorForDocs, GraphResponseToSearchResultMapper, SearchResultAndDriveItemToSharingMapper } from '../../../../common/utils/Utils';
+import { SearchQueryGeneratorForDocs, GraphSearchResponseMapper, DrivePermissionResponseMapper } from '../../../../common/utils/Utils';
 import { SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
 import { _CONST } from '../../../../common/utils/Const';
 import { useGraphService } from '../../../../common/services/useGraphService';
 import { ISearchResultExtended } from '../SharingView/ISearchResultExtended';
 import { set } from '@microsoft/sp-lodash-subset';
 import { IDrivePermissionParams } from '../../../../common/model';
+import { ISharingResult } from '../../model';
+import GoverFilter from '../helper/GoverFilter';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
     const governContext = useContext(SharingWebPartContext);
-    const { getSiteGroups,
-        // getSharingLinks,
-        // getSearchResults,
-        getDocsByGraphSearch
-    } = usePnPService(governContext.webpartContext);
 
+    const { getSiteGroups
+    } = usePnPService(governContext.webpartContext);
     const { getByGraphSearch, getDriveItemsPermission } = useGraphService(governContext.webpartContext);
 
     const [sharedFiles, setSharedFiles] = useState<ISharingResult[]>([]);
@@ -72,7 +70,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             try {
                 // get searchItems where fileIds are in paginatedItems
                 const locSearchItems = searchItems.filter(item => paginatedItems.includes(item.FileId));
-                console.log("FazLog ~ loadPage ~ locSearchItems:", locSearchItems);
                 const sharedResults: ISharingResult[] = [];
                 // const driveItemParam = locSearchItems.map(item => ({ driveId: item.DriveId, driveItemId: item.DriveItemId }));
                 const driveItems = await getDriveItemsPermission(paginatedListItems);
@@ -80,12 +77,8 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
                 // now we have all the data we need, we can start building up the result
                 driveItems.forEach(driveItem => {
-
-                    console.log("FazLog ~ loadPage ~ locSearchItems:", locSearchItems);
-                    console.log("FazLog ~ loadPage ~ driveItem:", driveItem);
                     const file = locSearchItems.filter(item => item.FileId === driveItem.fileId)[0];
-                    console.log("FazLog ~ loadPage ~ file:", file);
-                    const locSharedResult = SearchResultAndDriveItemToSharingMapper(file, driveItem.permission, locSpGroups);
+                    const locSharedResult = DrivePermissionResponseMapper(file, driveItem, locSpGroups);
                     sharedResults.push(locSharedResult);
                 });
 
@@ -117,17 +110,19 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         const init = async (): Promise<void> => {
             try {
                 const searchReqForDocs: SearchRequest = {
-                    entityTypes: ["driveItem", "listItem"],
+                    entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
                     query: {
                         queryString: `${SearchQueryGeneratorForDocs(governContext.webpartContext)}`
                     },
-                    fields: _CONST.DocsSearch.Fields,
+                    fields: _CONST.GraphSearch.DocsSearch.Fields,
                     from: 0,
                     size: 500
                 };
 
                 const searchResponse = await getByGraphSearch(searchReqForDocs);
-                const locSearchItems = GraphResponseToSearchResultMapper(searchResponse);
+                console.log("FazLog ~ init ~ searchResponse:", searchResponse);
+                const locSearchItems = GraphSearchResponseMapper<ISearchResultExtended>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
+                console.log("FazLog ~ init ~ locSearchItems:", locSearchItems);
                 setSearchItems(locSearchItems);
                 // get all file ids
                 const locFileIds = locSearchItems.map((item) => item.FileId);
@@ -226,6 +221,15 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             isPadded: true,
             data: 'date'
         },
+        {
+            key: 'SiteUrl',
+            name: 'Site',
+            fieldName: 'SiteUrl',
+            minWidth: 100,
+            maxWidth: 150,
+            isResizable: true,
+            data: 'string'
+        },
     ];
 
     const _renderItemColumn = (item: ISharingResult, index: number, column: IColumn): any => {
@@ -270,6 +274,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     return (
         <div>
 
+            <GoverFilter />
             <ShimmeredDetailsList
                 // usePageCache={true}
                 columns={columns}

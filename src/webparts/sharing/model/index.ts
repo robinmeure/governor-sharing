@@ -25,6 +25,7 @@ export interface ISharingResult {
     Channel?: string;
     FileId?: string;
     SharingUserType?: any;
-    SiteUrl?: string;
+    SiteUrl: string;
+    SiteName: string;
 }
 //#endregion

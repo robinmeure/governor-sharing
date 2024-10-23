@@ -18,7 +18,8 @@ export interface ISearchResultExtended extends ISearchResult {
   DriveItemId?: string;
   FileId?: string;
   DriveId?: string;
-  SiteUrl?: string;
+  SiteUrl: string;
+  SiteName: string;
 }
 
 export interface IGraphSearchResultExtended extends SearchHit {

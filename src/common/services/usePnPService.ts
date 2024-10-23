@@ -10,23 +10,15 @@ import "@pnp/sp/site-groups/web";
 import "@pnp/graph/search";
 import { Logger, LogLevel } from '@pnp/logging';
 import { Caching } from '@pnp/queryable';
-import ISharingResult from '../../webparts/sharing/components/SharingView/ISharingResult';
 import { GraphFI, graphfi } from '@pnp/graph';
-import { IFacepilePersona } from '@fluentui/react';
-import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, GraphResponseToSearchResultMapper, uniqForObject, SearchResultAndDriveItemToSharingMapper } from '../utils/Utils';
-import { useState } from 'react';
+import { GraphSearchResponseMapper } from '../utils/Utils';
 import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
 import { getGraph, getSP } from '../config/PnPjsConfig';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
-import { BatchRequestContent, BatchRequestStep, BatchResponseContent } from '@microsoft/microsoft-graph-client';
-import { Drive, Permission, SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
+import { SearchRequest } from '@microsoft/microsoft-graph-types';
 import { useGraphService } from "./useGraphService";
-import { IDrivePermissionParams } from "../model";
 
 interface IPnPService {
-    // getSharingLinks(listItems: ISearchResultExtended[], standardGroups: string[]): Promise<ISharingResult[]>;
-    // getSearchResults(): Promise<Record<string, any>>;
-    getDocsByGraphSearch(searchReq: SearchRequest): Promise<ISearchResultExtended[]>;
     getSiteGroups(): Promise<string[]>;
 }
 /** Represents all calls to SharePoint with help of Graph API
@@ -72,302 +64,29 @@ export const usePnPService = (spfxContext: WebPartContext | ApplicationCustomize
         }
     };
 
-    // const fetchSearchResultsAll = async (page: number, searchResults?: any[]): Promise<any> => {
-    //     if (page === 0) {
-    //         searchResults = [];
-    //     }
-    //     const graphCache = getCacheFI("Graph");
-    //     const tenantId = webpartContext.pageContext.aadInfo.tenantId;
-    //     const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
-    //     let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
-
-
-    //     let siteUrl = webpartContext.pageContext.web.absoluteUrl;
-    //     let isTeams: boolean, isPrivateChannel = false;
-    //     let groupId = "";
-    //     if (webpartContext.sdks.microsoftTeams) {
-    //         isTeams = true;
-    //     }
-    //     if (isTeams) {
-    //         isPrivateChannel = (webpartContext.sdks.microsoftTeams.context.channelType === "Private");
-    //         groupId = webpartContext.sdks.microsoftTeams.context.groupId;
-    //         siteUrl = webpartContext.sdks.microsoftTeams.context.teamSiteUrl;
-    //         if (!isPrivateChannel)
-    //             query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`;
-    //     }
-
-    //     Logger.write(`Issuing search query: ${query}`, LogLevel.Verbose);
-    //     const results = await graphCache.query({
-    //         entityTypes: ["driveItem", "listItem"],
-    //         query: {
-    //             queryString: `${query}`
-    //         },
-    //         fields: ["path", "id", "driveId", "driveItemId", "listId", "listItemId", "fileName", "fileExtension", "webUrl", "lastModifiedDateTime", "lastModified", "SharedWithUsersOWSUSER", "SPSiteUrl"],
-    //         from: page,
-    //         size: 500
-    //     });
-
-    //     searchResults.push(results);
-
-    //     if (results[0].hitsContainers[0].moreResultsAvailable) {
-    //         searchResults = await fetchSearchResultsAll(page + 500, searchResults)
-    //     }
-
-
-    //     return searchResults;
-    // }
-
-
-    const getDocsByGraphSearch = async (searchReq: SearchRequest): Promise<ISearchResultExtended[]> => {
-        try {
-            const locSearchResults: ISearchResultExtended[] = [];
-            const graphCache = getCacheFI("Graph");
-
-            Logger.write(`Issuing search query: ${searchReq.query.queryString}`, LogLevel.Verbose);
-            const results = await graphCache.query(searchReq);
-            console.log("FazLog ~ getDocsByGraphSearch ~ results:", results);
-
-            locSearchResults.push(...GraphResponseToSearchResultMapper(results));
-
-            if (results[0].hitsContainers[0].moreResultsAvailable) {
-                console.log("FazLog ~ getDocsByGraphSearch ~ moreResultsAvailable:");
-                //TODO handle pagination
-                // locSearchResults = await fetchSearchResultsAll(page + 500, searchResults)
-            }
-            return locSearchResults;
-        } catch (error) {
-            console.log("FazLog ~ getDocsByGraphSearch ~ error:", error);
-            throw error;
-        }
-    }
-
-    // const getSearchResults = async (): Promise<Record<string, any>> => {
-    //     const listItems: Record<string, any> = {};
-    //     let searchResults: any[] = [];
-    //     searchResults = await fetchSearchResultsAll(0, searchResults);
-
-    //     searchResults.forEach(results => {
-    //         results.forEach(result => {
-    //             result.hitsContainers.forEach(hits => {
-    //                 hits?.hits?.forEach(hit => {
-    //                     const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER !== undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
-
-    //                     // if we don't get a driveId back (e.g. documentlibrary), then skip the returned item
-    //                     if (hit.resource.listItem.fields.driveId === undefined)
-    //                         return;
-
-    //                     const result: ISearchResultExtended = {
-    //                         DriveItemId: hit.resource.id,
-    //                         FileName: hit.resource.listItem.fields.fileName,
-    //                         FileExtension: hit.resource.listItem.fields.fileExtension,
-    //                         ListId: hit.resource.listItem.fields.listId,
-    //                         FileId: hit.resource.listItem.id,
-    //                         DriveId: hit.resource.listItem.fields.driveId,
-    //                         ListItemId: hit.resource.listItem.fields.listItemId,
-    //                         Path: hit.resource.webUrl,
-    //                         LastModifiedTime: hit.resource.lastModifiedDateTime,
-    //                         SharedWithUsersOWSUSER: SharedWithUsersOWSUser,
-    //                         SiteUrl: hit.resource.listItem.fields.spSiteUrl
-    //                     }
-    //                     listItems[result.FileId] = result;
-    //                     Logger.writeJSON(result, LogLevel.Verbose);
-    //                 });
-    //             });
-    //         });
-    //     });
-
-    //     return listItems;
-    // }
-
-    // const getDriveItemsBySearchResult = async (listItems: Record<string, any>): Promise<Record<string, any>> => {
+    // const getDocsByGraphSearch = async (searchReq: SearchRequest): Promise<ISearchResultExtended[]> => {
     //     try {
-    //         console.log("FazLog ~ getDriveItemsBySearchResult ~ listItems:", listItems);
-    //         const driveItems: Record<string, any> = {};
+    //         const locSearchResults: ISearchResultExtended[] = [];
+    //         const graphCache = getCacheFI("Graph");
 
-    //         const graphClient = await webpartContext.msGraphClientFactory
-    //             .getClient('3');
+    //         Logger.write(`Issuing search query: ${searchReq.query.queryString}`, LogLevel.Verbose);
+    //         const results = await graphCache.query(searchReq);
 
-    //         const batchReq: BatchRequestStep[] = [];
-    //         for (const fileId in listItems) {
-    //             if (Object.prototype.hasOwnProperty.call(listItems, fileId)) {
-    //                 const file = listItems[fileId];
-    //                 batchReq.push({
-    //                     id: fileId,
-    //                     request: new Request(`https://graph.microsoft.com/drives/${file.DriveId}/items/${file.DriveItemId}/permissions`, {
-    //                         method: "GET"
-    //                     })
-    //                 });
-    //             }
+    //         locSearchResults.push(...GraphResponseToSearchResultMapper(results));
+
+    //         if (results[0].hitsContainers[0].moreResultsAvailable) {
+    //             //TODO handle pagination
+    //             // locSearchResults = await fetchSearchResultsAll(page + 500, searchResults)
     //         }
-
-    //         const batchRequestContent = new BatchRequestContent(batchReq);
-    //         const content = await batchRequestContent.getContent();
-
-    //         // POST the batch request content to the /$batch endpoint
-    //         const batchResponse = await graphClient.api('/$batch').post(content);
-
-    //         // Create a BatchResponseContent object to parse the response
-    //         const batchResponseContent = new BatchResponseContent(batchResponse);
-    //         const res = batchResponseContent.getResponses();
-
-    //         for (const fileId in listItems) {
-    //             if (Object.prototype.hasOwnProperty.call(listItems, fileId)) {
-    //                 const driveResponse = batchResponseContent.getResponseById(fileId);
-    //                 if (driveResponse.ok) {
-    //                     const drivePermissionItem: Permission = (await driveResponse.json())?.value as Permission;
-    //                     driveItems[fileId] = drivePermissionItem;
-    //                 }
-    //             }
-    //         }
-    //         return driveItems;
+    //         return locSearchResults;
     //     } catch (error) {
-    //         console.log("FazLog ~ getDriveItemsBySearchResult ~ error:", error);
-    //     }
-    // }
-
-    // const getSharingLinks = async (listItems: ISearchResultExtended[], standardGroups: string[]): Promise<ISharingResult[]> => {
-
-    //     try {
-    //         const sharedResults: ISharingResult[] = [];
-    //         const driveItemParam = listItems.map(item => ({ driveId: item.DriveId, driveItemId: item.DriveItemId }));
-    //         const driveItems = await getDriveItemsPermission(driveItemParam);
-
-    //         // now we have all the data we need, we can start building up the result
-    //         driveItems.forEach(driveItem => {
-
-    //             const file = listItems.filter(item => item.DriveId === driveItem.id)[0];
-    //             const locSharedResult = SearchResultAndDriveItemToSharingMapper(file, driveItem, standardGroups);
-    //             // const driveItem = driveItems[fileId];
-
-    //             // let sharedWithUser: IFacepilePersona[] = [];
-    //             // let sharingUserType = "Member";
-
-    //             // // Getting all the details of the file and in which folder is lives
-    //             // let folderUrl = file.Path.replace(`/${file.FileName}`, '');
-    //             // let folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
-
-    //             // // for certain filetypes we get the dispform.aspx link back instead of the full path, so we need to fix that
-    //             // if (folderName.indexOf("DispForm.aspx") > -1) {
-    //             //     folderUrl = folderUrl.substring(0, folderUrl.lastIndexOf("/Forms/DispForm.aspx"));
-    //             //     folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
-    //             //     file.FileExtension = file.FileName.substring(file.FileName.lastIndexOf(".") + 1);
-    //             // }
-
-    //             // file.FileUrl = file.Path;
-    //             // file.FolderUrl = folderUrl;
-    //             // file.FolderName = folderName;
-    //             // file.FileId = fileId;
-
-
-    //             // if (driveItem.link) {
-    //             //     switch (driveItem.link.scope) {
-    //             //         case "anonymous":
-    //             //             break;
-    //             //         case "organization": {
-    //             //             const _user: IFacepilePersona = {};
-    //             //             _user.personaName = driveItem.link.scope + " " + driveItem.link.type;
-    //             //             _user.data = "Organization";
-    //             //             if (sharedWithUser.indexOf(_user) === -1) {
-    //             //                 sharedWithUser.push(_user);
-    //             //             }
-    //             //             break;
-    //             //         }
-    //             //         case "users": {
-    //             //             const _users = convertToFacePilePersona(driveItem.grantedToIdentitiesV2);
-    //             //             sharedWithUser.push(..._users);
-    //             //             break;
-    //             //         }
-    //             //         default:
-    //             //             break;
-    //             //     }
-    //             // }
-    //             // else // checking the normal permissions as well, other than the sharing links
-    //             // {
-    //             //     // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
-    //             //     if (standardGroups.indexOf(driveItem.grantedTo.user.displayName) === -1) {
-    //             //         const _users = convertUserToFacePilePersona(driveItem.grantedToV2);
-    //             //         sharedWithUser.push(_users);
-    //             //     }
-    //             //     else // otherwise, we're gonna add these groups and mark it as inherited permissions
-    //             //     {
-    //             //         const _user: IFacepilePersona = {};
-    //             //         _user.personaName = driveItem.grantedTo.user.displayName;
-    //             //         _user.data = "Inherited";
-    //             //         if (sharedWithUser.indexOf(_user) === -1) {
-    //             //             sharedWithUser.push(_user);
-    //             //         }
-    //             //     }
-    //             // }
-
-    //             // if (file.SharedWithUsersOWSUSER !== null) {
-    //             //     const _users = processUsers(file.SharedWithUsersOWSUSER);
-    //             //     sharedWithUser.push(..._users);
-    //             // }
-
-    //             // // if there are any duplicates, this will remove them (e.g. multiple organization links)
-    //             // sharedWithUser = uniqForObject(sharedWithUser);
-    //             // //TODO check
-    //             // // if (sharedWithUser.length === 0)
-    //             // //     continue;
-
-
-    //             // let isGuest = false;
-    //             // let isLink = false;
-    //             // let isInherited = false;
-
-    //             // for (const user of sharedWithUser) {
-    //             //     switch (user.data) {
-    //             //         case "Guest": isGuest = true; break;
-    //             //         case "Organization": isLink = true; break;
-    //             //         case "Inherited": isInherited = true; break;
-    //             //     }
-    //             // }
-
-    //             // // if we found a guest user, we need to set the sharingUserType to Guest
-    //             // if (isGuest) {
-    //             //     sharingUserType = "Guest";
-    //             // }
-    //             // else if (isLink) {
-    //             //     sharingUserType = "Link";
-    //             // }
-    //             // else if (isInherited) {
-    //             //     sharingUserType = "Inherited";
-    //             // }
-
-    //             // // building up the result to be returned
-    //             // const sharedResult: ISharingResult =
-    //             // {
-    //             //     FileExtension: file?.FileExtension ? file.FileExtension : "folder",
-    //             //     FileName: file.FileName,
-    //             //     Channel: file.FolderName,
-    //             //     LastModified: file.LastModifiedTime,
-    //             //     SharedWith: sharedWithUser,
-    //             //     ListId: file.ListId,
-    //             //     ListItemId: file.ListItemId,
-    //             //     Url: file.FileUrl,
-    //             //     FolderUrl: file.FolderUrl,
-    //             //     SharingUserType: sharingUserType,
-    //             //     FileId: file.FileId,
-    //             //     SiteUrl: file.SiteUrl
-    //             // };
-    //             sharedResults.push(locSharedResult);
-    //             Logger.writeJSON(locSharedResult, LogLevel.Verbose);
-    //         });
-    //         return sharedResults;
-    //     }
-    //     catch (error) {
-    //         Logger.write(`getPageReviewItems in useSPService | Error: ${error}`, LogLevel.Error);
+    //         console.log("FazLog ~ getDocsByGraphSearch ~ error:", error);
     //         throw error;
     //     }
-    // };
-
-
+    // }
 
     // Return functions
     return {
-        // getSharingLinks,
-        // getSearchResults,
-        getSiteGroups,
-        getDocsByGraphSearch
+        getSiteGroups
     };
 };

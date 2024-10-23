@@ -9,5 +9,10 @@ export interface IDrivePermissionParams {
 
 export interface IDrivePermissionResponse {
     fileId: string;
-    permission: Permission;
+    permissions: Permission[];
+}
+
+export interface ISiteData {
+    name: string;
+    url: string;
 }

@@ -1,12 +1,12 @@
 /* eslint-disable */
 
 import { IColumn, IContextualMenuItem, IFacepilePersona } from '@fluentui/react';
-import { IdentitySet, Permission, SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
+import { EntityType, IdentitySet, Permission, SearchRequest, SearchResponse, SharePointIdentitySet } from '@microsoft/microsoft-graph-types';
 import { isEqual } from '@microsoft/sp-lodash-subset';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
-import { _CONST } from './Const';
 import { ISharingResult } from '../../webparts/sharing/model';
+import { IDrivePermissionResponse, ISiteData } from '../model';
 
 // need to rework this sorting method to be a) working with dates and b) be case insensitive
 export function genericSort<T>(items: T[], columnKey: string, isSortedDescending?: boolean): T[] {
@@ -75,9 +75,9 @@ export function convertToGraphUserFromLinkKind(linkKind: number): microsoftgraph
   return _user;
 }
 
-export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePersona {
-  if (user["siteUser"]) {
-    const siteUser = user["siteUser"];
+export function convertUserToFacePilePersona(identity: SharePointIdentitySet): IFacepilePersona {
+  if (identity.siteUser) {
+    const siteUser = identity.siteUser;
     const _user: IFacepilePersona =
     {
       data: (siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
@@ -86,8 +86,8 @@ export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePerson
     };
     return _user;
   }
-  else if (user["siteGroup"]) {
-    const siteGroup = user["siteGroup"];
+  else if (identity.siteGroup) {
+    const siteGroup = identity.siteGroup;
     const _user: IFacepilePersona =
     {
       data: "Group",
@@ -99,21 +99,20 @@ export function convertUserToFacePilePersona(user: IdentitySet): IFacepilePerson
   else {
     const _user: IFacepilePersona =
     {
-      name: user.user.id,
-      data: (user.user.id === null) ? "Guest" : "Member",
-      personaName: user.user.displayName
+      name: identity.user.id,
+      data: (identity.user.id === null) ? "Guest" : "Member",
+      personaName: identity.user.displayName
     };
     return _user;
   }
-
 }
 
-export function convertToFacePilePersona(users: IdentitySet[]): IFacepilePersona[] {
+export function convertToFacePilePersona(identities: SharePointIdentitySet[]): IFacepilePersona[] {
   const _users: IFacepilePersona[] = [];
-  if (users.length > 1) {
-    users.forEach((user) => {
-      if (user["siteUser"] !== null) {
-        const siteUser = user["siteUser"];
+  if (identities.length > 1) {
+    identities.forEach((user) => {
+      if (user.siteUser) {
+        const siteUser = user.siteUser;
         const _user: IFacepilePersona =
         {
           data: (siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
@@ -133,8 +132,8 @@ export function convertToFacePilePersona(users: IdentitySet[]): IFacepilePersona
       }
     });
   }
-  else {
-    _users.push(convertUserToFacePilePersona(users[0]));
+  else if (identities.length === 1) {
+    _users.push(convertUserToFacePilePersona(identities[0]));
   }
 
   return _users;
@@ -236,9 +235,15 @@ export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => 
   try {
     const tenantId = context.pageContext.aadInfo.tenantId;
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
-    // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
-    let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
-
+    let query = `List of Mac (IsDocument:TRUE OR IsContainer:TRUE) AND 
+                (NOT FileExtension:aspx) AND 
+                (SPSiteUrl:${context.pageContext.web.absoluteUrl}) AND 
+                (
+                  (SharedWithUsersOWSUSER:*) OR 
+                  (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)
+                )`;
+    // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
+    query = `Mac SPSiteUrl:${context.pageContext.web.absoluteUrl}`;
     let siteUrl = context.pageContext.web.absoluteUrl;
     let isTeams: boolean, isPrivateChannel = false;
     let groupId = "";
@@ -261,46 +266,63 @@ export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => 
 }
 
 
-export const GraphResponseToSearchResultMapper = (searchResponse: SearchResponse[]): ISearchResultExtended[] => {
+export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], entityType: EntityType[]): T[] => {
 
   try {
-    const locSearchResultExtended: ISearchResultExtended[] = [];
-    searchResponse.forEach(results => {
-      results.hitsContainers.forEach(hits => {
-        hits?.hits?.forEach((hit: any) => {
-          const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER !== undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
+    const locMappedVal: unknown[] = [];
 
-          // if we don't get a driveId back (e.g. documentlibrary), then skip the returned item
-          if (hit.resource.listItem.fields.driveId === undefined)
-            return;
+    if (entityType.includes("driveItem") || entityType.includes("listItem")) {
+      searchResponse.forEach(results => {
+        results.hitsContainers.forEach(hits => {
+          hits?.hits?.forEach((hit: any) => {
+            const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER !== undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
 
-          const result: ISearchResultExtended = {
-            DriveItemId: hit.resource.id,
-            FileName: hit.resource.listItem.fields.fileName,
-            FileExtension: hit.resource.listItem.fields.fileExtension ? hit.resource.listItem.fields.fileExtension : "folder",
-            ListId: hit.resource.listItem.fields.listId,
-            FileId: hit.resource.listItem.id,
-            DriveId: hit.resource.listItem.fields.driveId,
-            ListItemId: hit.resource.listItem.fields.listItemId,
-            Path: hit.resource.webUrl,
-            LastModifiedTime: hit.resource.lastModifiedDateTime,
-            SharedWithUsersOWSUSER: SharedWithUsersOWSUser,
-            SiteUrl: hit.resource.listItem.fields.spSiteUrl
-          }
-          locSearchResultExtended.push(result);
+            // if we don't get a driveId back (e.g. documentlibrary), then skip the returned item
+            if (hit.resource.listItem.fields.driveId === undefined)
+              return;
+
+            const result: ISearchResultExtended = {
+              DriveItemId: hit.resource.id,
+              FileName: hit.resource.listItem.fields.fileName,
+              FileExtension: hit.resource.listItem.fields.fileExtension ? hit.resource.listItem.fields.fileExtension : "folder",
+              ListId: hit.resource.listItem.fields.listId,
+              FileId: hit.resource.listItem.id,
+              DriveId: hit.resource.listItem.fields.driveId,
+              ListItemId: hit.resource.listItem.fields.listItemId,
+              Path: hit.resource.webUrl,
+              LastModifiedTime: hit.resource.lastModifiedDateTime,
+              SharedWithUsersOWSUSER: SharedWithUsersOWSUser,
+              SiteUrl: hit.resource.listItem.fields.spSiteUrl,
+              SiteName: hit.resource.listItem.fields.name
+            }
+            locMappedVal.push(result as unknown);
+          });
         });
       });
-    });
-    return locSearchResultExtended;
+    } else if (entityType.includes("site")) {
+      const locSiteData: ISiteData[] = [];
+      searchResponse.forEach(results => {
+        results.hitsContainers.forEach(hits => {
+          hits?.hits?.forEach((hit: any) => {
+
+            const result: ISiteData = {
+              name: hit.resource.displayName,
+              url: hit.resource.webUrl
+            }
+            locMappedVal.push(result as unknown);
+          });
+        });
+      });
+    }
+
+    return locMappedVal as T[];
   } catch (error) {
     console.log("FazLog ~ SearchResultMapper ~ error:", error);
     throw error;
   }
 }
 
-export const SearchResultAndDriveItemToSharingMapper = (file: ISearchResultExtended, driveItem: Permission, standardGroups: string[]): ISharingResult => {
-  console.log("FazLog ~ SearchResultAndDriveItemToSharingMapper ~ file:", file);
-
+export const DrivePermissionResponseMapper = (file: ISearchResultExtended, driveItem: IDrivePermissionResponse, standardGroups: string[]): ISharingResult => {
   try {
     let sharedWithUser: IFacepilePersona[] = [];
     let sharingUserType = "Member";
@@ -316,81 +338,80 @@ export const SearchResultAndDriveItemToSharingMapper = (file: ISearchResultExten
       file.FileExtension = file.FileName.substring(file.FileName.lastIndexOf(".") + 1);
     }
 
-
-    if (driveItem.link) {
-      switch (driveItem.link.scope) {
-        case "anonymous":
-          break;
-        case "organization": {
+    driveItem.permissions.map(perm => {
+      if (perm.link) {
+        switch (perm.link.scope) {
+          case "anonymous":
+            break;
+          case "organization": {
+            const _user: IFacepilePersona = {};
+            _user.personaName = perm.link.scope + " " + perm.link.type;
+            _user.data = "Organization";
+            if (sharedWithUser.indexOf(_user) === -1) {
+              sharedWithUser.push(_user);
+            }
+            break;
+          }
+          case "users": {
+            const _users = convertToFacePilePersona(perm.grantedToIdentitiesV2);
+            sharedWithUser.push(..._users);
+            break;
+          }
+          default:
+            break;
+        }
+      }
+      else // checking the normal permissions as well, other than the sharing links
+      {
+        // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
+        if (standardGroups.indexOf(perm.grantedTo?.user.displayName) === -1 && perm.grantedToV2) {
+          const _users = convertUserToFacePilePersona(perm.grantedToV2);
+          sharedWithUser.push(_users);
+        }
+        else // otherwise, we're gonna add these groups and mark it as inherited permissions
+        {
           const _user: IFacepilePersona = {};
-          _user.personaName = driveItem.link.scope + " " + driveItem.link.type;
-          _user.data = "Organization";
+          _user.personaName = perm.grantedTo?.user.displayName;
+          _user.data = "Inherited";
           if (sharedWithUser.indexOf(_user) === -1) {
             sharedWithUser.push(_user);
           }
-          break;
-        }
-        case "users": {
-          const _users = convertToFacePilePersona(driveItem.grantedToIdentitiesV2);
-          sharedWithUser.push(..._users);
-          break;
-        }
-        default:
-          break;
-      }
-    }
-    else // checking the normal permissions as well, other than the sharing links
-    {
-      // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
-      if (standardGroups.indexOf(driveItem.grantedTo.user.displayName) === -1) {
-        const _users = convertUserToFacePilePersona(driveItem.grantedToV2);
-        sharedWithUser.push(_users);
-      }
-      else // otherwise, we're gonna add these groups and mark it as inherited permissions
-      {
-        const _user: IFacepilePersona = {};
-        _user.personaName = driveItem.grantedTo.user.displayName;
-        _user.data = "Inherited";
-        if (sharedWithUser.indexOf(_user) === -1) {
-          sharedWithUser.push(_user);
         }
       }
-    }
 
-    if (file.SharedWithUsersOWSUSER !== null) {
-      const _users = processUsers(file.SharedWithUsersOWSUSER);
-      sharedWithUser.push(..._users);
-    }
-
+      if (file.SharedWithUsersOWSUSER !== null) {
+        const _users = processUsers(file.SharedWithUsersOWSUSER);
+        sharedWithUser.push(..._users);
+      }
+    });
     // if there are any duplicates, this will remove them (e.g. multiple organization links)
-    sharedWithUser = uniqForObject(sharedWithUser);
-    //TODO check
-    // if (sharedWithUser.length === 0)
-    //     continue;
+    if (sharedWithUser?.length > 0) {
+      sharedWithUser = uniqForObject(sharedWithUser);
+      let isGuest = false;
+      let isLink = false;
+      let isInherited = false;
 
+      for (const user of sharedWithUser) {
+        switch (user.data) {
+          case "Guest": isGuest = true; break;
+          case "Organization": isLink = true; break;
+          case "Inherited": isInherited = true; break;
+        }
+      }
 
-    let isGuest = false;
-    let isLink = false;
-    let isInherited = false;
-
-    for (const user of sharedWithUser) {
-      switch (user.data) {
-        case "Guest": isGuest = true; break;
-        case "Organization": isLink = true; break;
-        case "Inherited": isInherited = true; break;
+      // if we found a guest user, we need to set the sharingUserType to Guest
+      if (isGuest) {
+        sharingUserType = "Guest";
+      }
+      else if (isLink) {
+        sharingUserType = "Link";
+      }
+      else if (isInherited) {
+        sharingUserType = "Inherited";
       }
     }
 
-    // if we found a guest user, we need to set the sharingUserType to Guest
-    if (isGuest) {
-      sharingUserType = "Guest";
-    }
-    else if (isLink) {
-      sharingUserType = "Link";
-    }
-    else if (isInherited) {
-      sharingUserType = "Inherited";
-    }
+
 
     // building up the result to be returned
     const sharedResult: ISharingResult =
@@ -406,7 +427,8 @@ export const SearchResultAndDriveItemToSharingMapper = (file: ISearchResultExten
       FolderUrl: folderUrl,
       SharingUserType: sharingUserType,
       FileId: file.FileId,
-      SiteUrl: file.SiteUrl
+      SiteUrl: file.SiteUrl,
+      SiteName: file.SiteName
     };
     return sharedResult;
   } catch (error) {

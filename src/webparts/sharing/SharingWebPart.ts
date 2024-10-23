@@ -45,8 +45,6 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
       webpartContext: this.context,
       isTeams: this.context.sdks.microsoftTeams ? true : false
     };
-    console.log("FazLog ~ SharingWebPart ~ render ~ sharingWebPartContextValue:", sharingWebPartContextValue);
-
     // Put the context value with Provider
     const element: React.ReactElement = React.createElement(
       SharingWebPartContext.Provider,

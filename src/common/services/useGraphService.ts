@@ -31,7 +31,6 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
                         searchReq
                     ]
                 });
-            console.log("FazLog ~ getByGraphSearch ~ response:", response);
             return response?.value;
         } catch (error) {
             console.log("FazLog ~ getDocsByGraphSearch ~ error:", error);
@@ -57,17 +56,16 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
             const batchRequestContent = new BatchRequestContent(batchReq);
             const content = await batchRequestContent.getContent();
 
-            // POST the batch request content to the /$batch endpoint
             const batchResponse = await graphClient.api('/$batch').post(content);
             // Create a BatchResponseContent object to parse the response
             const batchResponseContent = new BatchResponseContent(batchResponse);
             const driveItemsPromises = Object.entries(listItems).map(async ([key]) => {
                 const driveResponse = batchResponseContent.getResponseById(key);
                 if (driveResponse.ok) {
-                    const driveItemPermission: Permission = (await driveResponse.json())?.value as Permission;
+                    const driveItemPermission: Permission[] = (await driveResponse.json())?.value as Permission[];
                     driveItemPermissions.push({
                         fileId: key,
-                        permission: driveItemPermission
+                        permissions: driveItemPermission
                     });
                 }
             });
@@ -82,7 +80,7 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
 
     return {
         getDriveItemsPermission,
-        getByGraphSearch
+        getByGraphSearch,
     };
 
 }
