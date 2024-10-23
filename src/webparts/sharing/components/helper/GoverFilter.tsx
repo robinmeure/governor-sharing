@@ -1,7 +1,6 @@
-
 /* eslint-disable */
 
-import { Dropdown, Stack } from '@fluentui/react';
+import { Dropdown, IDropdownOption, Stack } from '@fluentui/react';
 import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
 import { usePnPService } from '../../../../common/services/usePnPService';
@@ -14,11 +13,13 @@ const GoverFilter: React.FC = (): JSX.Element => {
     const { getSiteGroups,
         // getSharingLinks, 
         // getSearchResults,
-        getByGraphSearch,
-        getDocsByGraphSearch
     } = usePnPService(governContext.webpartContext);
     const [siteFilter, setSiteFilter] = useState<string[]>([]);
     const [libFilter, setLibFilter] = useState<string[]>([]);
+
+    const options: IDropdownOption[] = [
+
+    ];
 
     useEffect(() => {
         const getFilerValues = () => {
@@ -38,7 +39,6 @@ const GoverFilter: React.FC = (): JSX.Element => {
                     placeholder="Select an option"
                     label="Basic uncontrolled example"
                     options={options}
-                    styles={dropdownStyles}
                 />
             </div>
 
@@ -47,7 +47,6 @@ const GoverFilter: React.FC = (): JSX.Element => {
                     placeholder="Select an option"
                     label="Basic uncontrolled example"
                     options={options}
-                    styles={dropdownStyles}
                 />
             </div>
         </Stack>

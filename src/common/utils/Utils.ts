@@ -1,11 +1,12 @@
 /* eslint-disable */
 
 import { IColumn, IContextualMenuItem, IFacepilePersona } from '@fluentui/react';
-import { IdentitySet, SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
+import { IdentitySet, Permission, SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
 import { isEqual } from '@microsoft/sp-lodash-subset';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
 import { _CONST } from './Const';
+import { ISharingResult } from '../../webparts/sharing/model';
 
 // need to rework this sorting method to be a) working with dates and b) be case insensitive
 export function genericSort<T>(items: T[], columnKey: string, isSortedDescending?: boolean): T[] {
@@ -235,8 +236,8 @@ export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => 
   try {
     const tenantId = context.pageContext.aadInfo.tenantId;
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
-    let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
-
+    // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+    let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
 
     let siteUrl = context.pageContext.web.absoluteUrl;
     let isTeams: boolean, isPrivateChannel = false;
@@ -259,30 +260,8 @@ export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => 
   }
 }
 
-export const SearchRequestGeneratorForSites = (): SearchRequest => {
-  try {
-    let query = `*`;
 
-
-    const searchReqForDocs: SearchRequest = {
-      entityTypes: ["driveItem", "listItem"],
-      query: {
-        queryString: query
-      },
-      fields: _CONST.DocsSearch.Fields,
-      from: 0,
-      size: 500
-    }
-
-    return query;
-  } catch (error) {
-    console.log("FazLog ~ SearchQueryGeneratorForDocs ~ error:", error);
-    throw error;
-  }
-}
-
-
-export const SearchResultMapper = (searchResponse: SearchResponse[]): ISearchResultExtended[] => {
+export const GraphResponseToSearchResultMapper = (searchResponse: SearchResponse[]): ISearchResultExtended[] => {
 
   try {
     const locSearchResultExtended: ISearchResultExtended[] = [];
@@ -315,6 +294,123 @@ export const SearchResultMapper = (searchResponse: SearchResponse[]): ISearchRes
     return locSearchResultExtended;
   } catch (error) {
     console.log("FazLog ~ SearchResultMapper ~ error:", error);
+    throw error;
+  }
+}
+
+export const SearchResultAndDriveItemToSharingMapper = (file: ISearchResultExtended, driveItem: Permission, standardGroups: string[]): ISharingResult => {
+  console.log("FazLog ~ SearchResultAndDriveItemToSharingMapper ~ file:", file);
+
+  try {
+    let sharedWithUser: IFacepilePersona[] = [];
+    let sharingUserType = "Member";
+
+    // Getting all the details of the file and in which folder is lives
+    let folderUrl = file.Path.replace(`/${file.FileName}`, '');
+    let folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
+
+    // for certain filetypes we get the dispform.aspx link back instead of the full path, so we need to fix that
+    if (folderName.indexOf("DispForm.aspx") > -1) {
+      folderUrl = folderUrl.substring(0, folderUrl.lastIndexOf("/Forms/DispForm.aspx"));
+      folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
+      file.FileExtension = file.FileName.substring(file.FileName.lastIndexOf(".") + 1);
+    }
+
+
+    if (driveItem.link) {
+      switch (driveItem.link.scope) {
+        case "anonymous":
+          break;
+        case "organization": {
+          const _user: IFacepilePersona = {};
+          _user.personaName = driveItem.link.scope + " " + driveItem.link.type;
+          _user.data = "Organization";
+          if (sharedWithUser.indexOf(_user) === -1) {
+            sharedWithUser.push(_user);
+          }
+          break;
+        }
+        case "users": {
+          const _users = convertToFacePilePersona(driveItem.grantedToIdentitiesV2);
+          sharedWithUser.push(..._users);
+          break;
+        }
+        default:
+          break;
+      }
+    }
+    else // checking the normal permissions as well, other than the sharing links
+    {
+      // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
+      if (standardGroups.indexOf(driveItem.grantedTo.user.displayName) === -1) {
+        const _users = convertUserToFacePilePersona(driveItem.grantedToV2);
+        sharedWithUser.push(_users);
+      }
+      else // otherwise, we're gonna add these groups and mark it as inherited permissions
+      {
+        const _user: IFacepilePersona = {};
+        _user.personaName = driveItem.grantedTo.user.displayName;
+        _user.data = "Inherited";
+        if (sharedWithUser.indexOf(_user) === -1) {
+          sharedWithUser.push(_user);
+        }
+      }
+    }
+
+    if (file.SharedWithUsersOWSUSER !== null) {
+      const _users = processUsers(file.SharedWithUsersOWSUSER);
+      sharedWithUser.push(..._users);
+    }
+
+    // if there are any duplicates, this will remove them (e.g. multiple organization links)
+    sharedWithUser = uniqForObject(sharedWithUser);
+    //TODO check
+    // if (sharedWithUser.length === 0)
+    //     continue;
+
+
+    let isGuest = false;
+    let isLink = false;
+    let isInherited = false;
+
+    for (const user of sharedWithUser) {
+      switch (user.data) {
+        case "Guest": isGuest = true; break;
+        case "Organization": isLink = true; break;
+        case "Inherited": isInherited = true; break;
+      }
+    }
+
+    // if we found a guest user, we need to set the sharingUserType to Guest
+    if (isGuest) {
+      sharingUserType = "Guest";
+    }
+    else if (isLink) {
+      sharingUserType = "Link";
+    }
+    else if (isInherited) {
+      sharingUserType = "Inherited";
+    }
+
+    // building up the result to be returned
+    const sharedResult: ISharingResult =
+    {
+      FileExtension: file?.FileExtension ? file.FileExtension : "folder",
+      FileName: file.FileName,
+      Channel: folderName,
+      LastModified: file.LastModifiedTime,
+      SharedWith: sharedWithUser,
+      ListId: file.ListId,
+      ListItemId: file.ListItemId,
+      Url: file.Path,
+      FolderUrl: folderUrl,
+      SharingUserType: sharingUserType,
+      FileId: file.FileId,
+      SiteUrl: file.SiteUrl
+    };
+    return sharedResult;
+  } catch (error) {
+    console.log("FazLog ~ SearchResultToSharingMapper ~ error:", error);
     throw error;
   }
 }

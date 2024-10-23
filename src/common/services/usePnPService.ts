@@ -13,29 +13,31 @@ import { Caching } from '@pnp/queryable';
 import ISharingResult from '../../webparts/sharing/components/SharingView/ISharingResult';
 import { GraphFI, graphfi } from '@pnp/graph';
 import { IFacepilePersona } from '@fluentui/react';
-import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, SearchResultMapper, uniqForObject } from '../utils/Utils';
+import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, GraphResponseToSearchResultMapper, uniqForObject, SearchResultAndDriveItemToSharingMapper } from '../utils/Utils';
 import { useState } from 'react';
 import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
 import { getGraph, getSP } from '../config/PnPjsConfig';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { BatchRequestContent, BatchRequestStep, BatchResponseContent } from '@microsoft/microsoft-graph-client';
 import { Drive, Permission, SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
+import { useGraphService } from "./useGraphService";
+import { IDrivePermissionParams } from "../model";
 
 interface IPnPService {
-    // getSharingLinks(listItems: Record<string, any>): Promise<ISharingResult[]>;
+    // getSharingLinks(listItems: ISearchResultExtended[], standardGroups: string[]): Promise<ISharingResult[]>;
     // getSearchResults(): Promise<Record<string, any>>;
     getDocsByGraphSearch(searchReq: SearchRequest): Promise<ISearchResultExtended[]>;
-    getByGraphSearch(searchReq: SearchRequest): Promise<SearchResponse[]>;
     getSiteGroups(): Promise<string[]>;
 }
 /** Represents all calls to SharePoint with help of Graph API
- * @param {WebPartContext} webpartContext - is used to make Graph API calls
+ * @param {WebPartContext} spfxContext - is used to make Graph API calls
  */
 
-export const usePnPService = (webpartContext: WebPartContext | ApplicationCustomizerContext, siteUrl?: string): IPnPService => {
+export const usePnPService = (spfxContext: WebPartContext | ApplicationCustomizerContext, siteUrl?: string): IPnPService => {
 
-    const sp: SPFI = getSP(webpartContext, siteUrl);
-    const graph: GraphFI = getGraph(webpartContext, siteUrl);
+    const { getDriveItemsPermission } = useGraphService(spfxContext);
+    const sp: SPFI = getSP(spfxContext, siteUrl);
+    const graph: GraphFI = getGraph(spfxContext, siteUrl);
 
     const getCacheFI = <T extends "SP" | "Graph">(type: T): T extends "SP" ? SPFI : GraphFI => {
         const cache = type === "SP" ? spfi(sp) : graphfi(graph);
@@ -115,19 +117,6 @@ export const usePnPService = (webpartContext: WebPartContext | ApplicationCustom
     //     return searchResults;
     // }
 
-    const getByGraphSearch = async (searchReq: SearchRequest): Promise<SearchResponse[]> => {
-        try {
-            const locSearchResponse: SearchResponse[] = [];
-            const graphCache = getCacheFI("Graph");
-
-            Logger.write(`Issuing search query: ${searchReq.query.queryString}`, LogLevel.Verbose);
-            const response = await graphCache.query(searchReq);
-            return response;
-        } catch (error) {
-            console.log("FazLog ~ getDocsByGraphSearch ~ error:", error);
-            throw error;
-        }
-    }
 
     const getDocsByGraphSearch = async (searchReq: SearchRequest): Promise<ISearchResultExtended[]> => {
         try {
@@ -138,7 +127,7 @@ export const usePnPService = (webpartContext: WebPartContext | ApplicationCustom
             const results = await graphCache.query(searchReq);
             console.log("FazLog ~ getDocsByGraphSearch ~ results:", results);
 
-            locSearchResults.push(...SearchResultMapper(results));
+            locSearchResults.push(...GraphResponseToSearchResultMapper(results));
 
             if (results[0].hitsContainers[0].moreResultsAvailable) {
                 console.log("FazLog ~ getDocsByGraphSearch ~ moreResultsAvailable:");
@@ -236,133 +225,134 @@ export const usePnPService = (webpartContext: WebPartContext | ApplicationCustom
     //     }
     // }
 
-    // const getSharingLinks = async (listItems: Record<string, any>): Promise<ISharingResult[]> => {
+    // const getSharingLinks = async (listItems: ISearchResultExtended[], standardGroups: string[]): Promise<ISharingResult[]> => {
 
     //     try {
     //         const sharedResults: ISharingResult[] = [];
-    //         const driveItems = await getDriveItemsBySearchResult(listItems);
+    //         const driveItemParam = listItems.map(item => ({ driveId: item.DriveId, driveItemId: item.DriveItemId }));
+    //         const driveItems = await getDriveItemsPermission(driveItemParam);
 
     //         // now we have all the data we need, we can start building up the result
-    //         // eslint-disable-next-line guard-for-in
-    //         for (const fileId in driveItems) {
-    //             const driveItem = driveItems[fileId];
-    //             const file = listItems[fileId];
+    //         driveItems.forEach(driveItem => {
 
-    //             let sharedWithUser: IFacepilePersona[] = [];
-    //             let sharingUserType = "Member";
+    //             const file = listItems.filter(item => item.DriveId === driveItem.id)[0];
+    //             const locSharedResult = SearchResultAndDriveItemToSharingMapper(file, driveItem, standardGroups);
+    //             // const driveItem = driveItems[fileId];
 
-    //             // Getting all the details of the file and in which folder is lives
-    //             let folderUrl = file.Path.replace(`/${file.FileName}`, '');
-    //             let folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
+    //             // let sharedWithUser: IFacepilePersona[] = [];
+    //             // let sharingUserType = "Member";
 
-    //             // for certain filetypes we get the dispform.aspx link back instead of the full path, so we need to fix that
-    //             if (folderName.indexOf("DispForm.aspx") > -1) {
-    //                 folderUrl = folderUrl.substring(0, folderUrl.lastIndexOf("/Forms/DispForm.aspx"));
-    //                 folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
-    //                 file.FileExtension = file.FileName.substring(file.FileName.lastIndexOf(".") + 1);
-    //             }
+    //             // // Getting all the details of the file and in which folder is lives
+    //             // let folderUrl = file.Path.replace(`/${file.FileName}`, '');
+    //             // let folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
 
-    //             file.FileUrl = file.Path;
-    //             file.FolderUrl = folderUrl;
-    //             file.FolderName = folderName;
-    //             file.FileId = fileId;
+    //             // // for certain filetypes we get the dispform.aspx link back instead of the full path, so we need to fix that
+    //             // if (folderName.indexOf("DispForm.aspx") > -1) {
+    //             //     folderUrl = folderUrl.substring(0, folderUrl.lastIndexOf("/Forms/DispForm.aspx"));
+    //             //     folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
+    //             //     file.FileExtension = file.FileName.substring(file.FileName.lastIndexOf(".") + 1);
+    //             // }
 
-
-    //             driveItem.forEach(permission => {
-    //                 if (permission.link) {
-    //                     switch (permission.link.scope) {
-    //                         case "anonymous":
-    //                             break;
-    //                         case "organization": {
-    //                             const _user: IFacepilePersona = {};
-    //                             _user.personaName = permission.link.scope + " " + permission.link.type;
-    //                             _user.data = "Organization";
-    //                             if (sharedWithUser.indexOf(_user) === -1) {
-    //                                 sharedWithUser.push(_user);
-    //                             }
-    //                             break;
-    //                         }
-    //                         case "users": {
-    //                             const _users = convertToFacePilePersona(permission.grantedToIdentitiesV2);
-    //                             sharedWithUser.push(..._users);
-    //                             break;
-    //                         }
-    //                         default:
-    //                             break;
-    //                     }
-    //                 }
-    //                 else // checking the normal permissions as well, other than the sharing links
-    //                 {
-    //                     // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
-    //                     if (standardGroups.indexOf(permission.grantedTo.user.displayName) === -1) {
-    //                         const _users = convertUserToFacePilePersona(permission.grantedToV2);
-    //                         sharedWithUser.push(_users);
-    //                     }
-    //                     else // otherwise, we're gonna add these groups and mark it as inherited permissions
-    //                     {
-    //                         const _user: IFacepilePersona = {};
-    //                         _user.personaName = permission.grantedTo.user.displayName;
-    //                         _user.data = "Inherited";
-    //                         if (sharedWithUser.indexOf(_user) === -1) {
-    //                             sharedWithUser.push(_user);
-    //                         }
-    //                     }
-    //                 }
-    //             });
-
-    //             if (file.SharedWithUsersOWSUSER !== null) {
-    //                 const _users = processUsers(file.SharedWithUsersOWSUSER);
-    //                 sharedWithUser.push(..._users);
-    //             }
-
-    //             // if there are any duplicates, this will remove them (e.g. multiple organization links)
-    //             sharedWithUser = uniqForObject(sharedWithUser);
-    //             if (sharedWithUser.length === 0)
-    //                 continue;
+    //             // file.FileUrl = file.Path;
+    //             // file.FolderUrl = folderUrl;
+    //             // file.FolderName = folderName;
+    //             // file.FileId = fileId;
 
 
-    //             let isGuest = false;
-    //             let isLink = false;
-    //             let isInherited = false;
+    //             // if (driveItem.link) {
+    //             //     switch (driveItem.link.scope) {
+    //             //         case "anonymous":
+    //             //             break;
+    //             //         case "organization": {
+    //             //             const _user: IFacepilePersona = {};
+    //             //             _user.personaName = driveItem.link.scope + " " + driveItem.link.type;
+    //             //             _user.data = "Organization";
+    //             //             if (sharedWithUser.indexOf(_user) === -1) {
+    //             //                 sharedWithUser.push(_user);
+    //             //             }
+    //             //             break;
+    //             //         }
+    //             //         case "users": {
+    //             //             const _users = convertToFacePilePersona(driveItem.grantedToIdentitiesV2);
+    //             //             sharedWithUser.push(..._users);
+    //             //             break;
+    //             //         }
+    //             //         default:
+    //             //             break;
+    //             //     }
+    //             // }
+    //             // else // checking the normal permissions as well, other than the sharing links
+    //             // {
+    //             //     // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
+    //             //     if (standardGroups.indexOf(driveItem.grantedTo.user.displayName) === -1) {
+    //             //         const _users = convertUserToFacePilePersona(driveItem.grantedToV2);
+    //             //         sharedWithUser.push(_users);
+    //             //     }
+    //             //     else // otherwise, we're gonna add these groups and mark it as inherited permissions
+    //             //     {
+    //             //         const _user: IFacepilePersona = {};
+    //             //         _user.personaName = driveItem.grantedTo.user.displayName;
+    //             //         _user.data = "Inherited";
+    //             //         if (sharedWithUser.indexOf(_user) === -1) {
+    //             //             sharedWithUser.push(_user);
+    //             //         }
+    //             //     }
+    //             // }
 
-    //             for (const user of sharedWithUser) {
-    //                 switch (user.data) {
-    //                     case "Guest": isGuest = true; break;
-    //                     case "Organization": isLink = true; break;
-    //                     case "Inherited": isInherited = true; break;
-    //                 }
-    //             }
+    //             // if (file.SharedWithUsersOWSUSER !== null) {
+    //             //     const _users = processUsers(file.SharedWithUsersOWSUSER);
+    //             //     sharedWithUser.push(..._users);
+    //             // }
 
-    //             // if we found a guest user, we need to set the sharingUserType to Guest
-    //             if (isGuest) {
-    //                 sharingUserType = "Guest";
-    //             }
-    //             else if (isLink) {
-    //                 sharingUserType = "Link";
-    //             }
-    //             else if (isInherited) {
-    //                 sharingUserType = "Inherited";
-    //             }
+    //             // // if there are any duplicates, this will remove them (e.g. multiple organization links)
+    //             // sharedWithUser = uniqForObject(sharedWithUser);
+    //             // //TODO check
+    //             // // if (sharedWithUser.length === 0)
+    //             // //     continue;
 
-    //             // building up the result to be returned
-    //             const sharedResult: ISharingResult =
-    //             {
-    //                 FileExtension: file?.FileExtension ? file.FileExtension : "folder",
-    //                 FileName: file.FileName,
-    //                 Channel: file.FolderName,
-    //                 LastModified: file.LastModifiedTime,
-    //                 SharedWith: sharedWithUser,
-    //                 ListId: file.ListId,
-    //                 ListItemId: file.ListItemId,
-    //                 Url: file.FileUrl,
-    //                 FolderUrl: file.FolderUrl,
-    //                 SharingUserType: sharingUserType,
-    //                 FileId: file.FileId,
-    //                 SiteUrl: file.SiteUrl
-    //             };
-    //             sharedResults.push(sharedResult);
-    //             Logger.writeJSON(sharedResult, LogLevel.Verbose);
-    //         }
+
+    //             // let isGuest = false;
+    //             // let isLink = false;
+    //             // let isInherited = false;
+
+    //             // for (const user of sharedWithUser) {
+    //             //     switch (user.data) {
+    //             //         case "Guest": isGuest = true; break;
+    //             //         case "Organization": isLink = true; break;
+    //             //         case "Inherited": isInherited = true; break;
+    //             //     }
+    //             // }
+
+    //             // // if we found a guest user, we need to set the sharingUserType to Guest
+    //             // if (isGuest) {
+    //             //     sharingUserType = "Guest";
+    //             // }
+    //             // else if (isLink) {
+    //             //     sharingUserType = "Link";
+    //             // }
+    //             // else if (isInherited) {
+    //             //     sharingUserType = "Inherited";
+    //             // }
+
+    //             // // building up the result to be returned
+    //             // const sharedResult: ISharingResult =
+    //             // {
+    //             //     FileExtension: file?.FileExtension ? file.FileExtension : "folder",
+    //             //     FileName: file.FileName,
+    //             //     Channel: file.FolderName,
+    //             //     LastModified: file.LastModifiedTime,
+    //             //     SharedWith: sharedWithUser,
+    //             //     ListId: file.ListId,
+    //             //     ListItemId: file.ListItemId,
+    //             //     Url: file.FileUrl,
+    //             //     FolderUrl: file.FolderUrl,
+    //             //     SharingUserType: sharingUserType,
+    //             //     FileId: file.FileId,
+    //             //     SiteUrl: file.SiteUrl
+    //             // };
+    //             sharedResults.push(locSharedResult);
+    //             Logger.writeJSON(locSharedResult, LogLevel.Verbose);
+    //         });
     //         return sharedResults;
     //     }
     //     catch (error) {
@@ -371,12 +361,13 @@ export const usePnPService = (webpartContext: WebPartContext | ApplicationCustom
     //     }
     // };
 
+
+
     // Return functions
     return {
         // getSharingLinks,
         // getSearchResults,
         getSiteGroups,
-        getDocsByGraphSearch,
-        getByGraphSearch
+        getDocsByGraphSearch
     };
 };

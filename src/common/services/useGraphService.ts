@@ -2,36 +2,57 @@
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { ApplicationCustomizerContext } from "@microsoft/sp-application-base";
 import { BatchRequestContent, BatchRequestStep, BatchResponseContent } from "@microsoft/microsoft-graph-client";
-import { Permission } from "@microsoft/microsoft-graph-types";
-
+import { Permission, SearchRequest, SearchResponse } from "@microsoft/microsoft-graph-types";
+import { MSGraphClientV3 } from '@microsoft/sp-http';
+import { IDrivePermissionParams, IDrivePermissionResponse } from "../model";
 
 interface IGraphService {
-    getDriveItemsBySearchResult(listItems: Record<string, any>): Promise<Record<string, any>>;
+    getDriveItemsPermission(driveItems: Record<string, IDrivePermissionParams>): Promise<IDrivePermissionResponse[]>;
+    getByGraphSearch(searchReq: SearchRequest): Promise<SearchResponse[]>;
 
 }
 
-export const useGraphService = (context: WebPartContext | ApplicationCustomizerContext): IGraphService => {
+export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomizerContext): IGraphService => {
 
-    const getDriveItemsBySearchResult = async (listItems: Record<string, any>): Promise<Record<string, any>> => {
+    let graphClient: MSGraphClientV3;
+
+    const initializeGraphClient = async () => {
+        if (!graphClient) {
+            graphClient = await spfxContext.msGraphClientFactory.getClient("3") as MSGraphClientV3;
+        }
+    };
+
+    const getByGraphSearch = async (searchReq: SearchRequest): Promise<SearchResponse[]> => {
         try {
-            console.log("FazLog ~ getDriveItemsBySearchResult ~ listItems:", listItems);
-            const driveItems: Record<string, any> = {};
+            await initializeGraphClient();
+            const response = await graphClient.api('/search/query')
+                .post({
+                    requests: [
+                        searchReq
+                    ]
+                });
+            console.log("FazLog ~ getByGraphSearch ~ response:", response);
+            return response?.value;
+        } catch (error) {
+            console.log("FazLog ~ getDocsByGraphSearch ~ error:", error);
+            throw error;
+        }
+    }
 
-            const graphClient = await context.msGraphClientFactory
-                .getClient('3');
+    const getDriveItemsPermission = async (listItems: Record<string, IDrivePermissionParams>): Promise<IDrivePermissionResponse[]> => {
+        try {
+            await initializeGraphClient();
+            const driveItemPermissions: IDrivePermissionResponse[] = [];
 
             const batchReq: BatchRequestStep[] = [];
-            for (const fileId in listItems) {
-                if (Object.prototype.hasOwnProperty.call(listItems, fileId)) {
-                    const file = listItems[fileId];
-                    batchReq.push({
-                        id: fileId,
-                        request: new Request(`https://graph.microsoft.com/drives/${file.DriveId}/items/${file.DriveItemId}/permissions`, {
-                            method: "GET"
-                        })
-                    });
-                }
-            }
+            Object.entries(listItems).forEach(([key, file]) => {
+                batchReq.push({
+                    id: key,
+                    request: new Request(`https://graph.microsoft.com/drives/${file.driveId}/items/${file.driveItemId}/permissions`, {
+                        method: "GET"
+                    })
+                });
+            });
 
             const batchRequestContent = new BatchRequestContent(batchReq);
             const content = await batchRequestContent.getContent();
@@ -40,23 +61,28 @@ export const useGraphService = (context: WebPartContext | ApplicationCustomizerC
             const batchResponse = await graphClient.api('/$batch').post(content);
             // Create a BatchResponseContent object to parse the response
             const batchResponseContent = new BatchResponseContent(batchResponse);
-            for (const fileId in listItems) {
-                if (Object.prototype.hasOwnProperty.call(listItems, fileId)) {
-                    const driveResponse = batchResponseContent.getResponseById(fileId);
-                    if (driveResponse.ok) {
-                        const drivePermissionItem: Permission = (await driveResponse.json())?.value as Permission;
-                        driveItems[fileId] = drivePermissionItem;
-                    }
+            const driveItemsPromises = Object.entries(listItems).map(async ([key]) => {
+                const driveResponse = batchResponseContent.getResponseById(key);
+                if (driveResponse.ok) {
+                    const driveItemPermission: Permission = (await driveResponse.json())?.value as Permission;
+                    driveItemPermissions.push({
+                        fileId: key,
+                        permission: driveItemPermission
+                    });
                 }
-            }
-            return driveItems;
+            });
+
+            await Promise.all(driveItemsPromises);
+            return driveItemPermissions;
         } catch (error) {
             console.log("FazLog ~ getDriveItemsBySearchResult ~ error:", error);
+            throw error;
         }
     }
 
     return {
-        getDriveItemsBySearchResult
+        getDriveItemsPermission,
+        getByGraphSearch
     };
 
 }

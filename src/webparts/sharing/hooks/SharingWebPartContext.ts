@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { createContext } from 'react';
 import { ISharingWebPartContext } from '../model';
 

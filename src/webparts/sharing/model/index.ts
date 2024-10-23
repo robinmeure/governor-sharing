@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable */
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { IFacepilePersona } from "@fluentui/react";
 

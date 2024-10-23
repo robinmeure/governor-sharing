@@ -9,96 +9,113 @@ import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
 import { usePnPService } from '../../../../common/services/usePnPService';
 import { Pagination } from '@pnp/spfx-controls-react';
-import { SearchQueryGeneratorForDocs } from '../../../../common/utils/Utils';
-import { SearchRequest } from '@microsoft/microsoft-graph-types';
+import { SearchQueryGeneratorForDocs, GraphResponseToSearchResultMapper, SearchResultAndDriveItemToSharingMapper } from '../../../../common/utils/Utils';
+import { SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
 import { _CONST } from '../../../../common/utils/Const';
+import { useGraphService } from '../../../../common/services/useGraphService';
+import { ISearchResultExtended } from '../SharingView/ISearchResultExtended';
+import { set } from '@microsoft/sp-lodash-subset';
+import { IDrivePermissionParams } from '../../../../common/model';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
     const governContext = useContext(SharingWebPartContext);
     const { getSiteGroups,
-        // getSharingLinks, 
+        // getSharingLinks,
         // getSearchResults,
         getDocsByGraphSearch
     } = usePnPService(governContext.webpartContext);
 
+    const { getByGraphSearch, getDriveItemsPermission } = useGraphService(governContext.webpartContext);
+
     const [sharedFiles, setSharedFiles] = useState<ISharingResult[]>([]);
     const [fileIds, setFileIds] = useState<string[]>([]);
-    let searchItems: Record<string, any> = [];
-    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [spGroups, setSpGroups] = useState<string[]>();
+
+    // let searchItems: Record<string, any> = [];
+    const [searchItems, setSearchItems] = useState<ISearchResultExtended[]>([]);
+    const [currentPage, setCurrentPage] = useState<number>();
     const [totalPages, setTotalPages] = useState<number>(1);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
 
-    const _processSharingLinks = async (locFieldIds: string[]): Promise<ISharingResult[]> => {
+    const loadPage = async (paramFileIds: string[]): Promise<void> => {
         try {
-            // setting these to be empty because of the pagination, 
-            // otherwise in the pagination items will be added to the existing array
-            const sharingLinks: ISharingResult[] = [];
-            console.log("FazLog ~ locFieldIds.forEach ~ searchItems:", searchItems);
-
-            const paginatedListItems: Record<string, any> = {};
-            locFieldIds.forEach((fileId) => {
-                paginatedListItems[fileId] = searchItems[fileId];
-            });
-
-
-            // getting the sharing links using expensive REST API calls based on the given list of Id's 
-            console.log("FazLog ~ const_processSharingLinks= ~ paginatedListItems:", paginatedListItems);
-            // const sharedLinkResults = await getSharingLinks(paginatedListItems);
-            // if (sharedLinkResults === null)
-            //     return;
-
-            // sharedLinkResults.forEach((sharedResult) => {
-            //     if (sharedResult.SharedWith === null)
-            //         return;
-
-            //     sharingLinks.push(sharedResult)
-            // });
-
-            return (sharingLinks);
-        } catch (error) {
-            console.log("FazLog ~ error:", error);
-        }
-    }
-
-
-    const loadPage = async (page: number, paramFileIds?: string[]): Promise<void> => {
-        try {
-            const locFileIds = paramFileIds ? paramFileIds : fileIds;
             setLoading(true);
-            const lastIndex = page * governContext.pageLimit;
+            // const paramFileIds = paramFileIds || fileIds;
+            const lastIndex = currentPage * governContext.pageLimit;
             const firstIndex = lastIndex - governContext.pageLimit;
+            const paginatedItems = paramFileIds.slice(firstIndex, lastIndex);
 
-            const paginatedItems = locFileIds.slice(firstIndex, lastIndex);
-            setCurrentPage(page);
             if (paginatedItems.length === 0) {
                 console.log("No items to display");
+                setLoading(false);
                 return;
             }
-            else {
-                console.log(`${locFileIds.length} shared items found`);
+
+            const paginatedListItems = paginatedItems.reduce((acc, fileId) => {
+                const foundItem = searchItems.filter(item => item.FileId === fileId);
+                if (foundItem.length === 0) return null;
+                acc[fileId] = {
+                    driveId: foundItem[0].DriveId,
+                    driveItemId: foundItem[0].DriveItemId
+                };
+                return acc;
+            }, {} as Record<string, IDrivePermissionParams>);
+            let locSpGroups = spGroups;
+            if (locSpGroups === undefined) {
+                locSpGroups = await getSiteGroups();
+                setSpGroups(locSpGroups);
             }
+            // const sharedLinkResults = await getSharingLinks(searchItems, locSpGroups);
 
+            try {
+                // get searchItems where fileIds are in paginatedItems
+                const locSearchItems = searchItems.filter(item => paginatedItems.includes(item.FileId));
+                console.log("FazLog ~ loadPage ~ locSearchItems:", locSearchItems);
+                const sharedResults: ISharingResult[] = [];
+                // const driveItemParam = locSearchItems.map(item => ({ driveId: item.DriveId, driveItemId: item.DriveItemId }));
+                const driveItems = await getDriveItemsPermission(paginatedListItems);
+                console.log("FazLog ~ loadPage ~ driveItems:", driveItems);
 
-            const locSharedFiles: ISharingResult[] = await _processSharingLinks(paginatedItems);
-            console.log("FazLog ~ loadPage ~ locSharedFiles:", locSharedFiles);
-            setSharedFiles(locSharedFiles);
+                // now we have all the data we need, we can start building up the result
+                driveItems.forEach(driveItem => {
 
+                    console.log("FazLog ~ loadPage ~ locSearchItems:", locSearchItems);
+                    console.log("FazLog ~ loadPage ~ driveItem:", driveItem);
+                    const file = locSearchItems.filter(item => item.FileId === driveItem.fileId)[0];
+                    console.log("FazLog ~ loadPage ~ file:", file);
+                    const locSharedResult = SearchResultAndDriveItemToSharingMapper(file, driveItem.permission, locSpGroups);
+                    sharedResults.push(locSharedResult);
+                });
 
+                if (!sharedResults) {
+                    setLoading(false);
+                    return;
+                }
+                const sharingLinks = sharedResults.filter(result => result.SharedWith !== null);
+                setSharedFiles(sharingLinks);
+            }
+            catch (error) {
+                throw error;
+            }
         } catch (error) {
-            console.log("FazLog ~ loadPage= ~ error:", error);
-            setError("In loadPage");
+            console.error("Error loading page:", error);
+            setError("Error loading page");
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
-    }
+    };
+
+    useEffect(() => {
+        if (currentPage !== undefined) {
+            loadPage(fileIds);
+        }
+    }, [currentPage]);
 
     useEffect(() => {
         const init = async (): Promise<void> => {
             try {
-                const groups = await getSiteGroups();
-                console.log("FazLog ~ init ~ groups:", groups);
-
                 const searchReqForDocs: SearchRequest = {
                     entityTypes: ["driveItem", "listItem"],
                     query: {
@@ -107,19 +124,19 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                     fields: _CONST.DocsSearch.Fields,
                     from: 0,
                     size: 500
-                }
+                };
 
-                const locSearchItems = await getDocsByGraphSearch(searchReqForDocs);
-                console.log("FazLog ~ init ~ locSearchItems:", locSearchItems);
-                // console.log("FazLog ~ init ~ locSearchItems:", locSearchItems);
-                // searchItems = locSearchItems;
-                // const locFileIds = Object.keys(locSearchItems);
-                // setFileIds(locFileIds);
-                // setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-                // await loadPage(currentPage, locFileIds);
-
+                const searchResponse = await getByGraphSearch(searchReqForDocs);
+                const locSearchItems = GraphResponseToSearchResultMapper(searchResponse);
+                setSearchItems(locSearchItems);
+                // get all file ids
+                const locFileIds = locSearchItems.map((item) => item.FileId);
+                setFileIds(locFileIds);
+                setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
+                setCurrentPage(1);
+                // await loadPage(locFileIds);
             } catch (error) {
-                console.log("FazLog ~ init ~ error:", error);
+                console.error("Error initializing:", error);
             }
         };
         init();
@@ -268,7 +285,8 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onChange={async (page) => {
-                    await loadPage(page);
+                    setCurrentPage(page);
+                    // await loadPage(page);
                 }}
                 limiter={3} // Optional - default value 3
                 hideFirstPageJump // Optional
