@@ -1,4 +1,4 @@
-/* eslint-disable */
+
 import * as React from 'react'
 import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
@@ -54,6 +54,7 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
       React.createElement(SharingApp)
     );
 
+    // eslint-disable-next-line @microsoft/spfx/pair-react-dom-render-unmount
     ReactDom.render(element, this.domElement);
 
 

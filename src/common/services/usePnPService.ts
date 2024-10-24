@@ -1,4 +1,4 @@
-/* eslint-disable */
+
 import { ApplicationCustomizerContext } from "@microsoft/sp-application-base";
 import { SPFI, spfi } from '@pnp/sp';
 import "@pnp/sp/webs";
@@ -11,12 +11,8 @@ import "@pnp/graph/search";
 import { Logger, LogLevel } from '@pnp/logging';
 import { Caching } from '@pnp/queryable';
 import { GraphFI, graphfi } from '@pnp/graph';
-import { GraphSearchResponseMapper } from '../utils/Utils';
-import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
 import { getGraph, getSP } from '../config/PnPjsConfig';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
-import { SearchRequest } from '@microsoft/microsoft-graph-types';
-import { useGraphService } from "./useGraphService";
 
 interface IPnPService {
     getSiteGroups(): Promise<string[]>;
@@ -27,7 +23,6 @@ interface IPnPService {
 
 export const usePnPService = (spfxContext: WebPartContext | ApplicationCustomizerContext, siteUrl?: string): IPnPService => {
 
-    const { getDriveItemsPermission } = useGraphService(spfxContext);
     const sp: SPFI = getSP(spfxContext, siteUrl);
     const graph: GraphFI = getGraph(spfxContext, siteUrl);
 

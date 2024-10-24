@@ -1,5 +1,3 @@
-
-
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 // import pnp and pnp logging system
 import { ISPFXContext, spfi, SPFI, SPFx as spSPFx } from "@pnp/sp";

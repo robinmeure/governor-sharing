@@ -1,6 +1,5 @@
-/* eslint-disable */
-
-import { Facepile, IColumn, Icon, Link, OverflowButtonType, Persona, Text, PersonaSize, ShimmeredDetailsList, TooltipHost, SelectionMode, DialogType, MarqueeSelection } from '@fluentui/react';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { Facepile, IColumn, Icon, Link, OverflowButtonType, Persona, Text, PersonaSize, ShimmeredDetailsList, TooltipHost, SelectionMode, DialogType, } from '@fluentui/react';
 import * as React from 'react'
 import * as moment from 'moment';
 import { FileIconType, getFileTypeIconProps } from '@fluentui/react-file-type-icons';
@@ -8,16 +7,14 @@ import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
 import { usePnPService } from '../../../../common/services/usePnPService';
 import { IFrameDialog, Pagination } from '@pnp/spfx-controls-react';
-import { SearchQueryGeneratorForDocs, GraphSearchResponseMapper, DrivePermissionResponseMapper } from '../../../../common/utils/Utils';
-import { SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
+import { SearchQueryGeneratorForDocs } from '../../../../common/utils/Utils';
+import { SearchRequest } from '@microsoft/microsoft-graph-types';
 import { _CONST } from '../../../../common/utils/Const';
 import { useGraphService } from '../../../../common/services/useGraphService';
-import { ISearchResultExtended } from '../SharingView/ISearchResultExtended';
-import { set } from '@microsoft/sp-lodash-subset';
-import { IDrivePermissionParams } from '../../../../common/model';
-import { ISharingResult } from '../../model';
+import { IDriveItems, IFileSharingResponse, IListItemSearchResponse } from '../../../../common/model';
 import GoverFilter from '../helper/GoverFilter';
 import { Toolbar } from '@pnp/spfx-controls-react/lib/Toolbar';
+import { DrivePermissionResponseMapper, GraphSearchResponseMapper } from '../../../../common/config/Mapper';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
@@ -27,25 +24,26 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     } = usePnPService(governContext.webpartContext);
     const { getByGraphSearch, getDriveItemsPermission } = useGraphService(governContext.webpartContext);
 
-    const [sharedFiles, setSharedFiles] = useState<ISharingResult[]>([]);
+    const [sharedFiles, setSharedFiles] = useState<IFileSharingResponse[]>([]);
     const [fileIds, setFileIds] = useState<string[]>([]);
     const [spGroups, setSpGroups] = useState<string[]>();
 
     const [hideSharingSettingsDialog, setHideSharingSettingsDialog] = useState<boolean>(true);
-    const [selectedDocument, setSelectedDocument] = useState<ISharingResult>();
+    const [selectedDocument, setSelectedDocument] = useState<IFileSharingResponse>();
 
     // let searchItems: Record<string, any> = [];
-    const [searchItems, setSearchItems] = useState<ISearchResultExtended[]>([]);
+    const [searchItems, setSearchItems] = useState<IListItemSearchResponse[]>([]);
     const [currentPage, setCurrentPage] = useState<number>();
     const [totalPages, setTotalPages] = useState<number>(1);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
 
+    console.log("FazLog ~ render ~ searchItems:", loading, error);
     const loadPage = async (paramFileIds: string[]): Promise<void> => {
         try {
             setLoading(true);
             // const paramFileIds = paramFileIds || fileIds;
-            const lastIndex = currentPage * governContext.pageLimit;
+            const lastIndex = currentPage ? currentPage * governContext.pageLimit : 1;
             const firstIndex = lastIndex - governContext.pageLimit;
             const paginatedItems = paramFileIds.slice(firstIndex, lastIndex);
 
@@ -57,26 +55,29 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
             const paginatedListItems = paginatedItems.reduce((acc, fileId) => {
                 const foundItem = searchItems.filter(item => item.FileId === fileId);
-                if (foundItem.length === 0) return null;
+                if (foundItem.length === 0 || !foundItem[0].DriveId || !foundItem[0].DriveId) return null;
                 acc[fileId] = {
-                    driveId: foundItem[0].DriveId,
-                    driveItemId: foundItem[0].DriveItemId
+                    driveId: foundItem[0].DriveId || '',
+                    itemId: foundItem[0].ItemId || ''
                 };
                 return acc;
-            }, {} as Record<string, IDrivePermissionParams>);
-            let locSpGroups = spGroups;
-            if (locSpGroups === undefined) {
-                locSpGroups = await getSiteGroups();
+            }, {} as Record<string, IDriveItems>);
+
+            //TODO handle this differently
+            const locSpGroups: string[] = spGroups ? spGroups : await getSiteGroups();
+            if (spGroups === undefined) {
                 setSpGroups(locSpGroups);
             }
             // const sharedLinkResults = await getSharingLinks(searchItems, locSpGroups);
 
-            try {
-                // get searchItems where fileIds are in paginatedItems
-                const locSearchItems = searchItems.filter(item => paginatedItems.includes(item.FileId));
-                const sharedResults: ISharingResult[] = [];
-                // const driveItemParam = locSearchItems.map(item => ({ driveId: item.DriveId, driveItemId: item.DriveItemId }));
+            // get searchItems where fileIds are in paginatedItems
+            const locSearchItems = searchItems.filter(item => paginatedItems.includes(item.FileId));
+            const sharedResults: IFileSharingResponse[] = [];
+            // const driveItemParam = locSearchItems.map(item => ({ driveId: item.DriveId, driveItemId: item.DriveItemId }));
+            if (paginatedListItems) {
                 const driveItems = await getDriveItemsPermission(paginatedListItems);
+                console.log("FazLog ~ loadPage ~ driveItems:", driveItems);
+
                 console.log("FazLog ~ loadPage ~ driveItems:", driveItems);
 
                 // now we have all the data we need, we can start building up the result
@@ -92,10 +93,10 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 }
                 const sharingLinks = sharedResults.filter(result => result.SharedWith !== null);
                 setSharedFiles(sharingLinks);
+            } else {
+                throw new Error("Paginated list items are null");
             }
-            catch (error) {
-                throw error;
-            }
+
         } catch (error) {
             console.error("Error loading page:", error);
             setError("Error loading page");
@@ -106,7 +107,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
     useEffect(() => {
         if (currentPage !== undefined) {
-            loadPage(fileIds);
+            loadPage(fileIds).catch(error => console.error("Error loading page:", error));
         }
     }, [currentPage]);
 
@@ -125,7 +126,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
                 const searchResponse = await getByGraphSearch(searchReqForDocs);
                 console.log("FazLog ~ init ~ searchResponse:", searchResponse);
-                const locSearchItems = GraphSearchResponseMapper<ISearchResultExtended>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
+                const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
                 console.log("FazLog ~ init ~ locSearchItems:", locSearchItems);
                 setSearchItems(locSearchItems);
                 // get all file ids
@@ -138,7 +139,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 console.error("Error initializing:", error);
             }
         };
-        init();
+        init().catch(error => console.error("Error during initialization:", error));
     }, []);
 
     const columns = [
@@ -181,7 +182,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             minWidth: 150,
             maxWidth: 185,
             isResizable: true,
-            onRender: (item: ISharingResult) => {
+            onRender: (item: IFileSharingResponse) => {
                 if (item.SharedWith === null)
                     return <span />;
                 if (item.SharedWith.length > 1) {
@@ -236,8 +237,8 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         },
     ];
 
-    const _renderItemColumn = (item: ISharingResult, index: number, column: IColumn): any => {
-        const fieldContent = item[column.fieldName as keyof ISharingResult] as string;
+    const _renderItemColumn = (item: IFileSharingResponse, index: number, column: IColumn): any => {
+        const fieldContent = item[column.fieldName as keyof IFileSharingResponse] as string;
 
         // in here we're going to make the column render differently based on the column name
         switch (column.key) {
@@ -280,15 +281,15 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         setHideSharingSettingsDialog(false);
     }
 
-    const _handleItemInvoked = (item: ISharingResult): void => {
+    const _handleItemInvoked = (item: IFileSharingResponse): void => {
         console.log("FazLog ~ item:", item);
         setSelectedDocument(item);
 
     }
 
-    const _selection = new Selection({
-        onSelectionChanged: () => 
-    });
+    // const _selection = new Selection({
+    //     onSelectionChanged: () => 
+    // });
 
 
     return (
@@ -333,22 +334,22 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             }
 
 
-            <MarqueeSelection selection={_selection}>
-                <ShimmeredDetailsList
-                    // usePageCache={true}
-                    columns={columns}
-                    // enableShimmer={(!loading)}
-                    items={sharedFiles}
-                    // selection={this.selection}
-                    // onItemInvoked={this._handleItemInvoked}
-                    selectionMode={SelectionMode.single}
-                    onRenderItemColumn={_renderItemColumn}
-                    onItemInvoked={(item) => _handleItemInvoked(item)}
-                />
-            </MarqueeSelection>
+            {/* <MarqueeSelection selection={_selection}> */}
+            <ShimmeredDetailsList
+                // usePageCache={true}
+                columns={columns}
+                // enableShimmer={(!loading)}
+                items={sharedFiles}
+                // selection={this.selection}
+                // onItemInvoked={this._handleItemInvoked}
+                selectionMode={SelectionMode.single}
+                onRenderItemColumn={_renderItemColumn}
+                onItemInvoked={(item) => _handleItemInvoked(item)}
+            />
+            {/* </MarqueeSelection> */}
             <Pagination
                 key="files"
-                currentPage={currentPage}
+                currentPage={currentPage || 1}
                 totalPages={totalPages}
                 onChange={async (page) => {
                     setCurrentPage(page);

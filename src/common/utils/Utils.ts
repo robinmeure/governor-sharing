@@ -1,12 +1,10 @@
-/* eslint-disable */
 
-import { IColumn, IContextualMenuItem, IFacepilePersona } from '@fluentui/react';
-import { EntityType, IdentitySet, Permission, SearchRequest, SearchResponse, SharePointIdentitySet } from '@microsoft/microsoft-graph-types';
+
+import { IFacepilePersona } from '@fluentui/react';
+import { SharePointIdentitySet } from '@microsoft/microsoft-graph-types';
 import { isEqual } from '@microsoft/sp-lodash-subset';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
-import { ISearchResultExtended } from '../../webparts/sharing/components/SharingView/ISearchResultExtended';
-import { ISharingResult } from '../../webparts/sharing/model';
-import { IDrivePermissionResponse, ISiteData } from '../model';
+
 
 // need to rework this sorting method to be a) working with dates and b) be case insensitive
 export function genericSort<T>(items: T[], columnKey: string, isSortedDescending?: boolean): T[] {
@@ -14,28 +12,28 @@ export function genericSort<T>(items: T[], columnKey: string, isSortedDescending
   return items.slice(0).sort((a: T, b: T) => ((isSortedDescending ? a[key] < b[key] : a[key] > b[key]) ? 1 : -1));
 }
 // thanks to Michael Norward for this function, https://stackoverflow.com/questions/8900732/sort-objects-in-an-array-alphabetically-on-one-property-of-the-array
-export function textSort(objectsArr: any[], prop, isSortedDescending = true): any[] {
-  // eslint-disable-next-line no-prototype-builtins
-  const objectsHaveProp = objectsArr.every((object: any) => object.hasOwnProperty(prop));
-  if (objectsHaveProp) {
-    const newObjectsArr = objectsArr.slice();
-    newObjectsArr.sort((a, b) => {
-      if (isNaN(Number(a[prop]))) {
-        const textA = a[prop].toUpperCase(),
-          textB = b[prop].toUpperCase();
-        if (isSortedDescending) {
-          return textA < textB ? -1 : textA > textB ? 1 : 0;
-        } else {
-          return textB < textA ? -1 : textB > textA ? 1 : 0;
-        }
-      } else {
-        return isSortedDescending ? a[prop] - b[prop] : b[prop] - a[prop];
-      }
-    });
-    return newObjectsArr;
-  }
-  return objectsArr;
-}
+// export function textSort(objectsArr: any[], prop, isSortedDescending = true): any[] {
+//   // eslint-disable-next-line no-prototype-builtins
+//   const objectsHaveProp = objectsArr.every((object: any) => object.hasOwnProperty(prop));
+//   if (objectsHaveProp) {
+//     const newObjectsArr = objectsArr.slice();
+//     newObjectsArr.sort((a, b) => {
+//       if (isNaN(Number(a[prop]))) {
+//         const textA = a[prop].toUpperCase(),
+//           textB = b[prop].toUpperCase();
+//         if (isSortedDescending) {
+//           return textA < textB ? -1 : textA > textB ? 1 : 0;
+//         } else {
+//           return textB < textA ? -1 : textB > textA ? 1 : 0;
+//         }
+//       } else {
+//         return isSortedDescending ? a[prop] - b[prop] : b[prop] - a[prop];
+//       }
+//     });
+//     return newObjectsArr;
+//   }
+//   return objectsArr;
+// }
 
 export function uniqForObject<T>(array: T[]): T[] {
   const result: T[] = [];
@@ -48,41 +46,15 @@ export function uniqForObject<T>(array: T[]): T[] {
   return result;
 }
 
-export function rightTrim(sourceString: string, searchString: string): string {
-  for (; ;) {
-    const pos = sourceString.lastIndexOf(searchString);
-    if (pos === sourceString.length - 1) {
-      const result = sourceString.slice(0, pos);
-      sourceString = result;
-    }
-    else {
-      break;
-    }
-  }
-  return sourceString;
-}
-
-export function convertToGraphUserFromLinkKind(linkKind: number): microsoftgraph.User {
-  const _user: microsoftgraph.User = {};
-  switch (linkKind) {
-    case 2: _user.displayName = "Organization View"; break;
-    case 3: _user.displayName = "Organization Edit"; break;
-    case 4: _user.displayName = "Anonymous View"; break;
-    case 5: _user.displayName = "Anonymous Edit"; break;
-    default: break;
-  }
-  _user.userType = "Link";
-  return _user;
-}
 
 export function convertUserToFacePilePersona(identity: SharePointIdentitySet): IFacepilePersona {
   if (identity.siteUser) {
     const siteUser = identity.siteUser;
     const _user: IFacepilePersona =
     {
-      data: (siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
-      personaName: siteUser.displayName,
-      name: siteUser.loginName.replace("i:0#.f|membership|", "")
+      data: (siteUser.loginName && siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
+      personaName: siteUser.displayName ?? undefined,
+      name: siteUser.loginName ? siteUser.loginName.replace("i:0#.f|membership|", "") : undefined
     };
     return _user;
   }
@@ -91,17 +63,17 @@ export function convertUserToFacePilePersona(identity: SharePointIdentitySet): I
     const _user: IFacepilePersona =
     {
       data: "Group",
-      personaName: siteGroup.displayName,
-      name: siteGroup.loginName.replace("c:0t.c|tenant|", "")
+      personaName: siteGroup.displayName ?? undefined,
+      name: siteGroup.loginName ? siteGroup.loginName.replace("c:0t.c|tenant|", "") : undefined
     };
     return _user;
   }
   else {
     const _user: IFacepilePersona =
     {
-      name: identity.user.id,
-      data: (identity.user.id === null) ? "Guest" : "Member",
-      personaName: identity.user.displayName
+      name: identity.user?.id ?? undefined,
+      data: (identity.user?.id === null) ? "Guest" : "Member",
+      personaName: identity.user?.displayName ?? undefined
     };
     return _user;
   }
@@ -115,18 +87,18 @@ export function convertToFacePilePersona(identities: SharePointIdentitySet[]): I
         const siteUser = user.siteUser;
         const _user: IFacepilePersona =
         {
-          data: (siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
-          personaName: siteUser.displayName,
-          name: siteUser.loginName.replace("i:0#.f|membership|", "")
+          data: (siteUser.loginName && siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
+          personaName: siteUser.displayName ?? undefined,
+          name: siteUser.loginName ? siteUser.loginName.replace("i:0#.f|membership|", "") : undefined
         };
         _users.push(_user);
       }
       else {
         const _user: IFacepilePersona =
         {
-          name: user.user.id,
-          data: (user.user.id === null) ? "Guest" : "Member",
-          personaName: user.user.displayName
+          name: user.user?.id ?? undefined,
+          data: (user.user?.id === null) ? "Guest" : "Member",
+          personaName: user.user?.displayName ?? undefined
         };
         _users.push(_user);
       }
@@ -139,69 +111,8 @@ export function convertToFacePilePersona(identities: SharePointIdentitySet[]): I
   return _users;
 }
 
-export function getSortingMenuItems(column: IColumn, onSortColumn: (column: IColumn, isSortedDescending: boolean) => void): IContextualMenuItem[] {
-  const menuItems = [];
-  if (column.data === Number) {
-    menuItems.push(
-      {
-        key: 'smallToLarger',
-        name: 'Smaller to larger',
-        canCheck: true,
-        checked: column.isSorted && !column.isSortedDescending,
-        onClick: () => onSortColumn(column, false)
-      },
-      {
-        key: 'largerToSmall',
-        name: 'Larger to smaller',
-        canCheck: true,
-        checked: column.isSorted && column.isSortedDescending,
-        onClick: () => onSortColumn(column, true)
-      }
-    );
-  }
-  else if (column.data === Date) {
-    menuItems.push(
-      {
-        key: 'oldToNew',
-        name: 'Older to newer',
-        canCheck: true,
-        checked: column.isSorted && !column.isSortedDescending,
-        onClick: () => onSortColumn(column, false)
-      },
-      {
-        key: 'newToOld',
-        name: 'Newer to Older',
-        canCheck: true,
-        checked: column.isSorted && column.isSortedDescending,
-        onClick: () => onSortColumn(column, true)
-      }
-    );
-  }
-  else
-  //(column.data == String) 
-  // NOTE: in case of 'complex columns like Taxonomy, you need to add more logic'
-  {
-    menuItems.push(
-      {
-        key: 'aToZ',
-        name: 'A to Z',
-        canCheck: true,
-        checked: column.isSorted && !column.isSortedDescending,
-        onClick: () => onSortColumn(column, false)
-      },
-      {
-        key: 'zToA',
-        name: 'Z to A',
-        canCheck: true,
-        checked: column.isSorted && column.isSortedDescending,
-        onClick: () => onSortColumn(column, true)
-      }
-    );
-  }
-  return menuItems;
-}
 
-/// this is used to process the SharedWithUsersOWSUSER output to get the userPrincipalName and userType 
+/// this is used to process the SharedWithUsersOWSUSER output to get the userPrincipalName and userType
 export function processUsers(users: string): IFacepilePersona[] {
   const _users: microsoftgraph.User[] = [];
 
@@ -244,16 +155,15 @@ export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => 
                 )`;
     // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
     query = `Mac SPSiteUrl:${context.pageContext.web.absoluteUrl}`;
-    let siteUrl = context.pageContext.web.absoluteUrl;
-    let isTeams: boolean, isPrivateChannel = false;
+    let isTeams = false, isPrivateChannel = false;
     let groupId = "";
     if (context.sdks.microsoftTeams) {
       isTeams = true;
     }
     if (isTeams) {
-      isPrivateChannel = (context.sdks.microsoftTeams.context.channelType === "Private");
-      groupId = context.sdks.microsoftTeams.context.groupId;
-      siteUrl = context.sdks.microsoftTeams.context.teamSiteUrl;
+      isPrivateChannel = context.sdks.microsoftTeams && (context.sdks.microsoftTeams.context.channelType === "Private") || false;
+      groupId = context.sdks.microsoftTeams?.context?.groupId ?? "";
+      // const siteUrl = context.sdks.microsoftTeams ? context.sdks.microsoftTeams.context.teamSiteUrl : '';
       if (!isPrivateChannel)
         query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`;
     }
@@ -266,173 +176,4 @@ export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => 
 }
 
 
-export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], entityType: EntityType[]): T[] => {
 
-  try {
-    const locMappedVal: unknown[] = [];
-
-    if (entityType.includes("driveItem") || entityType.includes("listItem")) {
-      searchResponse.forEach(results => {
-        results.hitsContainers.forEach(hits => {
-          hits?.hits?.forEach((hit: any) => {
-            const SharedWithUsersOWSUser = (hit.resource.listItem.fields.sharedWithUsersOWSUSER !== undefined) ? hit.resource.listItem.fields.sharedWithUsersOWSUSER : null;
-
-            // if we don't get a driveId back (e.g. documentlibrary), then skip the returned item
-            if (hit.resource.listItem.fields.driveId === undefined)
-              return;
-
-            const result: ISearchResultExtended = {
-              DriveItemId: hit.resource.id,
-              FileName: hit.resource.listItem.fields.fileName,
-              FileExtension: hit.resource.listItem.fields.fileExtension ? hit.resource.listItem.fields.fileExtension : "folder",
-              ListId: hit.resource.listItem.fields.listId,
-              FileId: hit.resource.listItem.id,
-              DriveId: hit.resource.listItem.fields.driveId,
-              ListItemId: hit.resource.listItem.fields.listItemId,
-              Path: hit.resource.webUrl,
-              LastModifiedTime: hit.resource.lastModifiedDateTime,
-              SharedWithUsersOWSUSER: SharedWithUsersOWSUser,
-              SiteUrl: hit.resource.listItem.fields.spSiteUrl,
-              SiteName: hit.resource.listItem.fields.name
-            }
-            locMappedVal.push(result as unknown);
-          });
-        });
-      });
-    } else if (entityType.includes("site")) {
-      const locSiteData: ISiteData[] = [];
-      searchResponse.forEach(results => {
-        results.hitsContainers.forEach(hits => {
-          hits?.hits?.forEach((hit: any) => {
-
-            const result: ISiteData = {
-              name: hit.resource.displayName,
-              url: hit.resource.webUrl
-            }
-            locMappedVal.push(result as unknown);
-          });
-        });
-      });
-    }
-
-    return locMappedVal as T[];
-  } catch (error) {
-    console.log("FazLog ~ SearchResultMapper ~ error:", error);
-    throw error;
-  }
-}
-
-export const DrivePermissionResponseMapper = (file: ISearchResultExtended, driveItem: IDrivePermissionResponse, standardGroups: string[]): ISharingResult => {
-  try {
-    let sharedWithUser: IFacepilePersona[] = [];
-    let sharingUserType = "Member";
-
-    // Getting all the details of the file and in which folder is lives
-    let folderUrl = file.Path.replace(`/${file.FileName}`, '');
-    let folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
-
-    // for certain filetypes we get the dispform.aspx link back instead of the full path, so we need to fix that
-    if (folderName.indexOf("DispForm.aspx") > -1) {
-      folderUrl = folderUrl.substring(0, folderUrl.lastIndexOf("/Forms/DispForm.aspx"));
-      folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
-      file.FileExtension = file.FileName.substring(file.FileName.lastIndexOf(".") + 1);
-    }
-
-    driveItem.permissions.map(perm => {
-      if (perm.link) {
-        switch (perm.link.scope) {
-          case "anonymous":
-            break;
-          case "organization": {
-            const _user: IFacepilePersona = {};
-            _user.personaName = perm.link.scope + " " + perm.link.type;
-            _user.data = "Organization";
-            if (sharedWithUser.indexOf(_user) === -1) {
-              sharedWithUser.push(_user);
-            }
-            break;
-          }
-          case "users": {
-            const _users = convertToFacePilePersona(perm.grantedToIdentitiesV2);
-            sharedWithUser.push(..._users);
-            break;
-          }
-          default:
-            break;
-        }
-      }
-      else // checking the normal permissions as well, other than the sharing links
-      {
-        // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
-        if (standardGroups.indexOf(perm.grantedTo?.user.displayName) === -1 && perm.grantedToV2) {
-          const _users = convertUserToFacePilePersona(perm.grantedToV2);
-          sharedWithUser.push(_users);
-        }
-        else // otherwise, we're gonna add these groups and mark it as inherited permissions
-        {
-          const _user: IFacepilePersona = {};
-          _user.personaName = perm.grantedTo?.user.displayName;
-          _user.data = "Inherited";
-          if (sharedWithUser.indexOf(_user) === -1) {
-            sharedWithUser.push(_user);
-          }
-        }
-      }
-
-      if (file.SharedWithUsersOWSUSER !== null) {
-        const _users = processUsers(file.SharedWithUsersOWSUSER);
-        sharedWithUser.push(..._users);
-      }
-    });
-    // if there are any duplicates, this will remove them (e.g. multiple organization links)
-    if (sharedWithUser?.length > 0) {
-      sharedWithUser = uniqForObject(sharedWithUser);
-      let isGuest = false;
-      let isLink = false;
-      let isInherited = false;
-
-      for (const user of sharedWithUser) {
-        switch (user.data) {
-          case "Guest": isGuest = true; break;
-          case "Organization": isLink = true; break;
-          case "Inherited": isInherited = true; break;
-        }
-      }
-
-      // if we found a guest user, we need to set the sharingUserType to Guest
-      if (isGuest) {
-        sharingUserType = "Guest";
-      }
-      else if (isLink) {
-        sharingUserType = "Link";
-      }
-      else if (isInherited) {
-        sharingUserType = "Inherited";
-      }
-    }
-
-
-
-    // building up the result to be returned
-    const sharedResult: ISharingResult =
-    {
-      FileExtension: file?.FileExtension ? file.FileExtension : "folder",
-      FileName: file.FileName,
-      Channel: folderName,
-      LastModified: file.LastModifiedTime,
-      SharedWith: sharedWithUser,
-      ListId: file.ListId,
-      ListItemId: file.ListItemId,
-      Url: file.Path,
-      FolderUrl: folderUrl,
-      SharingUserType: sharingUserType,
-      FileId: file.FileId,
-      SiteUrl: file.SiteUrl,
-      SiteName: file.SiteName
-    };
-    return sharedResult;
-  } catch (error) {
-    console.log("FazLog ~ SearchResultToSharingMapper ~ error:", error);
-    throw error;
-  }
-}

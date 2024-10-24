@@ -1,13 +1,18 @@
-/* eslint-disable */
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { ApplicationCustomizerContext } from "@microsoft/sp-application-base";
 import { BatchRequestContent, BatchRequestStep, BatchResponseContent } from "@microsoft/microsoft-graph-client";
 import { Permission, SearchRequest, SearchResponse } from "@microsoft/microsoft-graph-types";
 import { MSGraphClientV3 } from '@microsoft/sp-http';
-import { IDrivePermissionParams, IDrivePermissionResponse } from "../model";
+import { IDriveItems } from "../model";
+
+
+export interface DrivePermissionResponse {
+    fileId: string;
+    permissions: Permission[];
+}
 
 interface IGraphService {
-    getDriveItemsPermission(driveItems: Record<string, IDrivePermissionParams>): Promise<IDrivePermissionResponse[]>;
+    getDriveItemsPermission(driveItems: Record<string, IDriveItems>): Promise<DrivePermissionResponse[]>;
     getByGraphSearch(searchReq: SearchRequest): Promise<SearchResponse[]>;
 
 }
@@ -16,9 +21,12 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
 
     let graphClient: MSGraphClientV3;
 
-    const initializeGraphClient = async () => {
+    const initializeGraphClient = async (): Promise<void> => {
         if (!graphClient) {
-            graphClient = await spfxContext.msGraphClientFactory.getClient("3") as MSGraphClientV3;
+            const client = await spfxContext.msGraphClientFactory.getClient("3") as MSGraphClientV3;
+            if (!graphClient) {
+                graphClient = client;
+            }
         }
     };
 
@@ -38,16 +46,16 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
         }
     }
 
-    const getDriveItemsPermission = async (listItems: Record<string, IDrivePermissionParams>): Promise<IDrivePermissionResponse[]> => {
+    const getDriveItemsPermission = async (listItems: Record<string, IDriveItems>): Promise<DrivePermissionResponse[]> => {
         try {
             await initializeGraphClient();
-            const driveItemPermissions: IDrivePermissionResponse[] = [];
+            const driveItemPermissions: DrivePermissionResponse[] = [];
 
             const batchReq: BatchRequestStep[] = [];
             Object.entries(listItems).forEach(([key, file]) => {
                 batchReq.push({
                     id: key,
-                    request: new Request(`https://graph.microsoft.com/drives/${file.driveId}/items/${file.driveItemId}/permissions`, {
+                    request: new Request(`https://graph.microsoft.com/drives/${file.driveId}/items/${file.itemId}/permissions`, {
                         method: "GET"
                     })
                 });
