@@ -1,13 +1,13 @@
 /* eslint-disable */
 
-import { Facepile, IColumn, Icon, Link, OverflowButtonType, Persona, Text, PersonaSize, ShimmeredDetailsList, TooltipHost, SelectionMode } from '@fluentui/react';
+import { Facepile, IColumn, Icon, Link, OverflowButtonType, Persona, Text, PersonaSize, ShimmeredDetailsList, TooltipHost, SelectionMode, DialogType, MarqueeSelection } from '@fluentui/react';
 import * as React from 'react'
 import * as moment from 'moment';
 import { FileIconType, getFileTypeIconProps } from '@fluentui/react-file-type-icons';
 import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
 import { usePnPService } from '../../../../common/services/usePnPService';
-import { Pagination } from '@pnp/spfx-controls-react';
+import { IFrameDialog, Pagination } from '@pnp/spfx-controls-react';
 import { SearchQueryGeneratorForDocs, GraphSearchResponseMapper, DrivePermissionResponseMapper } from '../../../../common/utils/Utils';
 import { SearchRequest, SearchResponse } from '@microsoft/microsoft-graph-types';
 import { _CONST } from '../../../../common/utils/Const';
@@ -17,6 +17,7 @@ import { set } from '@microsoft/sp-lodash-subset';
 import { IDrivePermissionParams } from '../../../../common/model';
 import { ISharingResult } from '../../model';
 import GoverFilter from '../helper/GoverFilter';
+import { Toolbar } from '@pnp/spfx-controls-react/lib/Toolbar';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
@@ -29,6 +30,9 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     const [sharedFiles, setSharedFiles] = useState<ISharingResult[]>([]);
     const [fileIds, setFileIds] = useState<string[]>([]);
     const [spGroups, setSpGroups] = useState<string[]>();
+
+    const [hideSharingSettingsDialog, setHideSharingSettingsDialog] = useState<boolean>(true);
+    const [selectedDocument, setSelectedDocument] = useState<ISharingResult>();
 
     // let searchItems: Record<string, any> = [];
     const [searchItems, setSearchItems] = useState<ISearchResultExtended[]>([]);
@@ -270,21 +274,78 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         }
     }
 
+    const _loadSharingDialogDetails = (): void => {
+        alert("test");
+        console.log("FazLog ~ selectedDocument:", selectedDocument);
+        setHideSharingSettingsDialog(false);
+    }
+
+    const _handleItemInvoked = (item: ISharingResult): void => {
+        console.log("FazLog ~ item:", item);
+        setSelectedDocument(item);
+
+    }
+
+    const _selection = new Selection({
+        onSelectionChanged: () => 
+    });
+
 
     return (
         <div>
 
             <GoverFilter />
-            <ShimmeredDetailsList
-                // usePageCache={true}
-                columns={columns}
-                // enableShimmer={(!loading)}
-                items={sharedFiles}
-                // selection={this.selection}
-                // onItemInvoked={this._handleItemInvoked}
-                selectionMode={SelectionMode.single}
-                onRenderItemColumn={_renderItemColumn}
+
+            <Toolbar actionGroups={{
+                'share': {
+                    'share': {
+                        title: 'Sharing Settings',
+                        iconName: 'Share',
+                        onClick: () => _loadSharingDialogDetails()
+                    }
+                }
+            }}
+                filters={[
+                    {
+                        id: "f1",
+                        title: "Guest/External Users",
+                    }]}
+                // onSelectedFiltersChange={this._onSelectedFiltersChange.bind(this)}
+                find={true}
+            // onFindQueryChange={this._findItem}
             />
+            {selectedDocument &&
+                <IFrameDialog
+                    url={`${selectedDocument.SiteUrl}/_layouts/15/sharedialog.aspx?listId=${selectedDocument.ListId}&listItemId=${selectedDocument.ListItemId}&clientId=sharePoint&mode=manageAccess&ma=0`}
+                    // iframeOnLoad={this._onIframeLoaded.bind(this)}
+                    hidden={hideSharingSettingsDialog}
+                    onDismiss={() => setHideSharingSettingsDialog(true)}
+                    modalProps={{
+                        isBlocking: false
+                    }}
+                    dialogContentProps={{
+                        type: DialogType.close,
+                        showCloseButton: false
+                    }}
+                    width={'570px'}
+                    height={'815px'}
+                />
+            }
+
+
+            <MarqueeSelection selection={_selection}>
+                <ShimmeredDetailsList
+                    // usePageCache={true}
+                    columns={columns}
+                    // enableShimmer={(!loading)}
+                    items={sharedFiles}
+                    // selection={this.selection}
+                    // onItemInvoked={this._handleItemInvoked}
+                    selectionMode={SelectionMode.single}
+                    onRenderItemColumn={_renderItemColumn}
+                    onItemInvoked={(item) => _handleItemInvoked(item)}
+                />
+            </MarqueeSelection>
             <Pagination
                 key="files"
                 currentPage={currentPage}
