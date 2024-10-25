@@ -5,7 +5,8 @@ import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { initializeIcons } from '@fluentui/react/lib/Icons';
 import { initializeFileTypeIcons } from '@fluentui/react-file-type-icons';
-
+import { Providers } from "@microsoft/mgt-element";
+import { SharePointProvider } from "@microsoft/mgt-sharepoint-provider";
 import {
   Logger,
   ConsoleListener,
@@ -33,6 +34,10 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     // setting up the logging framework
     Logger.subscribe(ConsoleListener(LOG_SOURCE));
     Logger.activeLogLevel = (this.properties.debugMode) ? LogLevel.Verbose : LogLevel.Warning;
+
+    if (!Providers.globalProvider) {
+      Providers.globalProvider = new SharePointProvider(this.context);
+    }
 
     // if you don't want to send telemetry data to PnP, you can opt-out here (see https://github.com/pnp/telemetry-js for details on what is being sent)
     // const telemetry = PnPTelemetry.getInstance();

@@ -16,6 +16,7 @@ import { Toolbar } from '@pnp/spfx-controls-react/lib/Toolbar';
 import { DrivePermissionResponseMapper, GraphSearchResponseMapper } from '../../../../common/config/Mapper';
 import { useBoolean } from '@fluentui/react-hooks';
 import { format } from 'date-fns';
+import { Person } from '@microsoft/mgt-react';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
@@ -189,7 +190,8 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             isPadded: true,
             onRender: (item: IFileSharingResponse) => {
                 return <div>
-                    {item.LastModifiedBy?.displayName}
+                    {/* {item.LastModifiedBy?.displayName} */}
+                    <Person personQuery="me" view="twolines" personCardInteraction="hover" />
                     <br />
                     {format(new Date(item.LastModified), 'dd-MMM-yyyy')}
                 </div>

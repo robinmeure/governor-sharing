@@ -1,7 +1,12 @@
 import * as React from 'react';
 import SharingList from './SharingList/SharingList';
 
-const SharingApp: React.FC = (): JSX.Element => {
+
+interface ISharingAppProps {
+
+}
+
+const SharingApp: React.FC<ISharingAppProps> = (): JSX.Element => {
 
     return <>
         <SharingList />
