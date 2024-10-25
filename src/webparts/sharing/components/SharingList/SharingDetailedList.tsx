@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { Text, ShimmeredDetailsList, SearchBox, DefaultButton, Panel, Stack, Selection, ActionButton, IColumn, SelectionMode } from '@fluentui/react';
+import { Text, ShimmeredDetailsList, SearchBox, DefaultButton, Stack, ActionButton, IColumn, SelectionMode } from '@fluentui/react';
 import * as React from 'react'
 import * as moment from 'moment';
 import { useContext, useEffect, useState } from 'react';
@@ -19,6 +18,7 @@ import SharedWithColumn from './columnRender/SharedWithColumn';
 import FileExtentionColumn from './columnRender/FileExtentionColumn';
 import LinkColumn from './columnRender/LinkColumn';
 import FileDetailPanel from './panelRender/FileDetailPanel';
+import FilterPanel, { IFilterItem } from './panelRender/FilterPanel';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
@@ -36,7 +36,11 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     const [selectedDocument, setSelectedDocument] = useState<IFileSharingResponse[]>([]);
 
     const [isFilterPanelOpen, { setTrue: openFilterPanel, setFalse: dismissFilterPanel }] = useBoolean(false);
-    // const [isFileDetailPanelOpen, { setTrue: openFileDetailPanel, setFalse: dismissFileDetailPanel }] = useBoolean(false);
+    const [filtreVal, setFilterVal] = useState<IFilterItem>({
+        siteUrl: "dai",
+        sharedType: [],
+        modifiedBy: ""
+    });
 
     // let searchItems: Record<string, any> = [];
     const [searchItems, setSearchItems] = useState<IListItemSearchResponse[]>([]);
@@ -252,24 +256,14 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
     // }
 
-    const _selection = new Selection({
-        onSelectionChanged: () => {
-            setSelectedDocument(_selection.getSelection());
-        },
-        getKey: (item: IFileSharingResponse) => item.FileId,
-    });
-
 
     return (
         <div>
-
-
             <Toolbar actionGroups={{
                 'share': {
                     'share': {
                         title: 'Sharing Settings',
                         iconName: 'Share',
-                        // onClick: () => openFileDetailPanel()
                     }
                 }
             }}
@@ -278,9 +272,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                         id: "f1",
                         title: "Guest/External Users",
                     }]}
-                // onSelectedFiltersChange={this._onSelectedFiltersChange.bind(this)}
                 find={true}
-            // onFindQueryChange={this._findItem}
             />
 
 
@@ -292,14 +284,16 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                     </Stack.Item>
                     <Stack horizontalAlign="end" style={{ marginLeft: 12 }}>
                         <DefaultButton text="Filter" onClick={openFilterPanel} />
-                        <Panel
-                            headerText="Filter"
-                            isOpen={isFilterPanelOpen}
-                            onDismiss={dismissFilterPanel}
-                            closeButtonAriaLabel="Close"
-                        >
-                            <p>Filter options goes here.</p>
-                        </Panel>
+                        <FilterPanel
+                            filterItem={filtreVal}
+                            isFilterPanelOpen={isFilterPanelOpen}
+                            onDismissFilterPanel={(newFilter) => {
+                                console.log("FazLog ~ newFilter:", newFilter);
+                                if (newFilter) {
+                                    setFilterVal(newFilter);
+                                }
+                                dismissFilterPanel();
+                            }} />
                     </Stack>
                 </Stack>
             </div>

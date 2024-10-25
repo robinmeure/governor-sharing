@@ -18,7 +18,7 @@ const FileDetailPanel: React.FC<IFileDetailPanelProps> = ({ file, isOpen, onDism
             isLightDismiss
             isOpen={isOpen}
             headerText={file.FileName}
-            type={PanelType.large}
+            type={PanelType.medium}
             onDismiss={() => onDismiss()}
             onRenderFooterContent={() =>
                 <div>
@@ -41,7 +41,7 @@ const FileDetailPanel: React.FC<IFileDetailPanelProps> = ({ file, isOpen, onDism
                         <div>
                             <iframe
                                 src={`${file.SiteUrl}/_layouts/15/sharedialog.aspx?listId=${file.ListId}&listItemId=${file.ListItemId}&clientId=sharePoint&mode=manageAccess&ma=0`} width="100%"
-                                height={800} />
+                                height={window.innerHeight - 260} />
                         </div>
                     </PivotItem>
                 </Pivot>
