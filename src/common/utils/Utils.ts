@@ -142,11 +142,11 @@ export function processUsers(users: string): IFacepilePersona[] {
 }
 
 
-export const searchQueryGeneratorForDocs = (context: WebPartContext): string => {
+export const searchQueryGeneratorForDocs = (context: WebPartContext, searchVal: string): string => {
   try {
     const tenantId = context.pageContext.aadInfo.tenantId;
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
-    let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+    let query = `${searchVal} (IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
     // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
     let isTeams = false, isPrivateChannel = false;
     let groupId = "";

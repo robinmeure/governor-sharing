@@ -1,4 +1,4 @@
-import { Text, ShimmeredDetailsList, SearchBox, DefaultButton, Stack, ActionButton, IColumn, SelectionMode } from '@fluentui/react';
+import { Text, ShimmeredDetailsList, SearchBox, DefaultButton, Stack, ActionButton, IColumn, SelectionMode, MessageBar, MessageBarType } from '@fluentui/react';
 import * as React from 'react'
 import * as moment from 'moment';
 import { useContext, useEffect, useState } from 'react';
@@ -32,12 +32,12 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     const [fileIds, setFileIds] = useState<string[]>([]);
     const [spGroups, setSpGroups] = useState<string[]>();
 
-    // const [hideSharingSettingsDialog, setHideSharingSettingsDialog] = useState<boolean>(true);
     const [selectedDocument, setSelectedDocument] = useState<IFileSharingResponse[]>([]);
 
+    //const [searchKeyword, setSearchKeyword] = useState<string>("");
     const [isFilterPanelOpen, { setTrue: openFilterPanel, setFalse: dismissFilterPanel }] = useBoolean(false);
     const [filtreVal, setFilterVal] = useState<IFilterItem>({
-        siteUrl: "dai",
+        siteUrl: "This the test site url",
         sharedType: [],
         modifiedBy: ""
     });
@@ -49,8 +49,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
 
-    console.log("FazLog ~ loading:", loading);
-    console.log("FazLog ~ render ~ searchItems:", loading, error);
     const loadPage = async (paramFileIds: string[]): Promise<void> => {
         try {
             setLoading(true);
@@ -87,9 +85,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             // const driveItemParam = locSearchItems.map(item => ({ driveId: item.DriveId, driveItemId: item.DriveItemId }));
             if (paginatedListItems) {
                 const driveItems = await getDriveItemsPermission(paginatedListItems);
-                console.log("FazLog ~ loadPage ~ driveItems:", driveItems);
-
-                console.log("FazLog ~ loadPage ~ driveItems:", driveItems);
 
                 // now we have all the data we need, we can start building up the result
                 driveItems.forEach(driveItem => {
@@ -102,8 +97,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                     setLoading(false);
                     return;
                 }
-                console.log("FazLog ~ loadPage ~ sharedResults:", sharedResults);
-
                 const sharingLinks = sharedResults.filter(result => result.SharedWith !== null);
                 setSharedFiles(sharingLinks);
             } else {
@@ -118,6 +111,38 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         }
     };
 
+    const getFiles = async (queryText: string): Promise<string[]> => {
+
+        try {
+            const searchReqForDocs: SearchRequest = {
+                entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
+                query: {
+                    queryString: `${searchQueryGeneratorForDocs(governContext.webpartContext, queryText)}`
+                },
+                fields: _CONST.GraphSearch.DocsSearch.Fields,
+                from: 0,
+                size: 500
+            };
+
+            const searchResponse = await getByGraphSearch(searchReqForDocs);
+            const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
+            console.log("FazLog ~ init:", locSearchItems);
+            setSearchItems(locSearchItems);
+            // get all file ids
+            const locFileIds = locSearchItems.map((item) => item.FileId);
+            setFileIds(locFileIds);
+
+            return locFileIds;
+
+            // await loadPage(locFileIds);
+
+        } catch (error) {
+            console.log("FazLog ~ getFiles ~ error:", error);
+            setError(error);
+            throw error;
+        }
+    }
+
     useEffect(() => {
         if (currentPage !== undefined) {
             loadPage(fileIds).catch(error => console.error("Error loading page:", error));
@@ -126,31 +151,10 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
     useEffect(() => {
         const init = async (): Promise<void> => {
-            try {
-                const searchReqForDocs: SearchRequest = {
-                    entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
-                    query: {
-                        queryString: `${searchQueryGeneratorForDocs(governContext.webpartContext)}`
-                    },
-                    fields: _CONST.GraphSearch.DocsSearch.Fields,
-                    from: 0,
-                    size: 500
-                };
-
-                const searchResponse = await getByGraphSearch(searchReqForDocs);
-                console.log("FazLog ~ init ~ searchResponse:", searchResponse);
-                const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
-                console.log("FazLog ~ init ~ locSearchItems:", locSearchItems);
-                setSearchItems(locSearchItems);
-                // get all file ids
-                const locFileIds = locSearchItems.map((item) => item.FileId);
-                setFileIds(locFileIds);
-                setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-                setCurrentPage(1);
-                // await loadPage(locFileIds);
-            } catch (error) {
-                console.error("Error initializing:", error);
-            }
+            const locFileIds = await getFiles("");
+            setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
+            setCurrentPage(1);
+            await loadPage(locFileIds);
         };
         init().catch(error => console.error("Error during initialization:", error));
     }, []);
@@ -250,12 +254,13 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         }
     ];
 
-
-    // const _handleItemInvoked = (item: IFileSharingResponse): void => {
-    //     setSelectedDocument([item]);
-
-    // }
-
+    if (!loading && error) {
+        return <div>
+            <MessageBar messageBarType={MessageBarType.error}>
+                Something went wrong - {error}
+            </MessageBar>
+        </div>
+    }
 
     return (
         <div>
@@ -274,13 +279,29 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                     }]}
                 find={true}
             />
-
-
             <div>
-
                 <Stack horizontal horizontalAlign="space-between">
                     <Stack.Item grow={3}>
-                        <SearchBox placeholder="Search..." underlined={true} />
+                        <SearchBox
+                            placeholder="Search..."
+                            underlined={true}
+                            //value={searchKeyword}
+                            // onChange={(e, newVal) => setSearchKeyword(newVal ? newVal : "")}
+                            onSearch={async (val) => {
+                                console.log("FazLog ~ val:", val);
+                                const locFileIds = await getFiles(val);
+                                setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
+                                setCurrentPage(1);
+                                await loadPage(locFileIds);
+                            }}
+                            onClear={async () => {
+
+                                const locFileIds = await getFiles("");
+                                setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
+                                setCurrentPage(1);
+                                await loadPage(locFileIds);
+                            }}
+                        />
                     </Stack.Item>
                     <Stack horizontalAlign="end" style={{ marginLeft: 12 }}>
                         <DefaultButton text="Filter" onClick={openFilterPanel} />
@@ -288,18 +309,20 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                             filterItem={filtreVal}
                             isFilterPanelOpen={isFilterPanelOpen}
                             onDismissFilterPanel={(newFilter) => {
-                                console.log("FazLog ~ newFilter:", newFilter);
-                                if (newFilter) {
-                                    setFilterVal(newFilter);
-                                }
                                 dismissFilterPanel();
+                                if (newFilter) {
+                                    setFilterVal({
+                                        siteUrl: newFilter.siteUrl,
+                                        sharedType: newFilter.sharedType,
+                                        modifiedBy: newFilter.modifiedBy
+                                    });
+                                }
                             }} />
                     </Stack>
                 </Stack>
             </div>
 
             {selectedDocument?.length > 0 &&
-
                 <FileDetailPanel
                     isOpen={selectedDocument?.length > 0}
                     file={selectedDocument[0]}
@@ -310,30 +333,33 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                     } />
             }
 
+            {!loading && sharedFiles.length === 0 && <div>
+                <MessageBar messageBarType={MessageBarType.info}>
+                    { }
+                </MessageBar>
+            </div>}
+
 
             <ShimmeredDetailsList
                 enableShimmer={loading}
-                // usePageCache={true}
+                usePageCache={true}
                 columns={_columns}
                 items={sharedFiles}
                 selectionMode={SelectionMode.none}
-            // selection={_selection as unknown as ISelection<IObjectWithKey>}
-            // selectionMode={SelectionMode.single}
-            // onRenderItemColumn={_renderItemColumn}
-            // onItemInvoked={(item) => _handleItemInvoked(item)}
             />
+
+
             <Pagination
                 key="files"
                 currentPage={currentPage || 1}
                 totalPages={totalPages}
-                onChange={async (page) => {
+                onChange={(page) => {
                     setCurrentPage(page);
-                    // await loadPage(page);
                 }}
-                limiter={3} // Optional - default value 3
-                hideFirstPageJump // Optional
-                hideLastPageJump // Optional
-                limiterIcon={"Emoji12"} // Optional
+                limiter={3}
+                hideFirstPageJump
+                hideLastPageJump
+                limiterIcon={"Emoji12"}
             />
         </div>
     )

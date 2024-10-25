@@ -37,7 +37,7 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
                         setFilterVal(props.filterItem);
                         props.onDismissFilterPanel(filtreVal);
                     }}>Apply</PrimaryButton>
-                    <DefaultButton onClick={() => props.onDismissFilterPanel()}>Close</DefaultButton>
+                    <DefaultButton style={{ marginLeft: 16 }} onClick={() => props.onDismissFilterPanel()}>Close</DefaultButton>
                 </div>}
             isFooterAtBottom={true}
         >
