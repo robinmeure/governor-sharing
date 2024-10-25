@@ -142,19 +142,12 @@ export function processUsers(users: string): IFacepilePersona[] {
 }
 
 
-export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => {
+export const searchQueryGeneratorForDocs = (context: WebPartContext): string => {
   try {
     const tenantId = context.pageContext.aadInfo.tenantId;
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
-    let query = `List of Mac (IsDocument:TRUE OR IsContainer:TRUE) AND 
-                (NOT FileExtension:aspx) AND 
-                (SPSiteUrl:${context.pageContext.web.absoluteUrl}) AND 
-                (
-                  (SharedWithUsersOWSUSER:*) OR 
-                  (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)
-                )`;
+    let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
     // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
-    query = `Mac SPSiteUrl:${context.pageContext.web.absoluteUrl}`;
     let isTeams = false, isPrivateChannel = false;
     let groupId = "";
     if (context.sdks.microsoftTeams) {
@@ -174,6 +167,8 @@ export const SearchQueryGeneratorForDocs = (context: WebPartContext): string => 
     throw error;
   }
 }
+
+
 
 
 

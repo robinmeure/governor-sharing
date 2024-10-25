@@ -1,6 +1,6 @@
 import { IFacepilePersona } from "@fluentui/react";
 import { SearchResponse, EntityType, SearchHit, ListItem, DriveItem, Site } from "@microsoft/microsoft-graph-types";
-import { IListItemSearchResponse, ISiteSearchResponse, IFileSharingResponse, SharingUserType } from "../model";
+import { IListItemSearchResponse, ISiteSearchResponse, IFileSharingResponse, SharedType } from "../model";
 import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from "../utils/Utils";
 import { DrivePermissionResponse } from "../services/useGraphService";
 
@@ -42,7 +42,10 @@ export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], e
                             SharedWithUsersOWSUSER: SharedWithUsersOWSUser,
                             SiteUrl: fields.spSiteUrl,
                             ViewableByExternalUsers: fields?.viewableByExternalUsers ?? false,
-                            LastModifiedBy: resource?.lastModifiedBy?.user ?? undefined
+                            LastModifiedBy: {
+                                displayName: resource.lastModifiedBy?.user?.displayName,
+                                id: resource?.lastModifiedBy?.user.email
+                            }
                         }
                         locMappedVal.push(result as unknown);
                     } else if (entityType.includes("site")) {
@@ -74,7 +77,7 @@ export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], e
 export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, driveItem: DrivePermissionResponse, standardGroups: string[]): IFileSharingResponse => {
     try {
         let sharedWithUser: IFacepilePersona[] = [];
-        let sharingUserType: SharingUserType = "Member";
+        let sharingUserType: SharedType = "Member";
 
         // Getting all the details of the file and in which folder is lives
         let folderUrl = file.Path ? file.Path.replace(`/${file.FileName}`, '') : '';
@@ -176,7 +179,7 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
             ListItemId: file.ListItemId ?? 0,
             Url: file.Path ?? '',
             FolderUrl: folderUrl,
-            SharingUserType: sharingUserType,
+            SharedType: sharingUserType,
             FileId: file.FileId ?? '',
             SiteUrl: file.SiteUrl ?? '',
             LastModifiedBy: file.LastModifiedBy

@@ -8,7 +8,7 @@ export interface IDriveItems {
 
 
 
-export type SharingUserType = "Link" | "Inherited" | "Owner" | "Member" | "Guest" | "Everyone";
+export type SharedType = "Link" | "Inherited" | "Owner" | "Member" | "Guest" | "Everyone";
 
 
 //#region Graph API Response Interfaces
@@ -25,7 +25,7 @@ export interface IFileSharingResponse {
     FolderUrl: string;
     Channel: string;
     FileId: string;
-    SharingUserType: SharingUserType;
+    SharedType: SharedType;
     SiteUrl: string;
     LastModifiedBy: Identity | undefined;
 }

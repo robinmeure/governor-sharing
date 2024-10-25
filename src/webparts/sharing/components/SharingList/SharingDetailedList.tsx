@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Facepile, IColumn, Icon, Link, OverflowButtonType, Persona, Text, PersonaSize, ShimmeredDetailsList, TooltipHost, SelectionMode, DialogType, SearchBox, MarqueeSelection, Selection, DefaultButton, Panel, Stack } from '@fluentui/react';
+import { Text, ShimmeredDetailsList, SearchBox, DefaultButton, Panel, Stack, Selection, ActionButton, IColumn, SelectionMode } from '@fluentui/react';
 import * as React from 'react'
 import * as moment from 'moment';
-import { FileIconType, getFileTypeIconProps } from '@fluentui/react-file-type-icons';
 import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
 import { usePnPService } from '../../../../common/services/usePnPService';
-import { IFrameDialog, Pagination } from '@pnp/spfx-controls-react';
-import { SearchQueryGeneratorForDocs } from '../../../../common/utils/Utils';
+import { Pagination } from '@pnp/spfx-controls-react';
+import { searchQueryGeneratorForDocs } from '../../../../common/utils/Utils';
 import { SearchRequest } from '@microsoft/microsoft-graph-types';
 import { _CONST } from '../../../../common/utils/Const';
 import { useGraphService } from '../../../../common/services/useGraphService';
@@ -15,8 +14,11 @@ import { IDriveItems, IFileSharingResponse, IListItemSearchResponse } from '../.
 import { Toolbar } from '@pnp/spfx-controls-react/lib/Toolbar';
 import { DrivePermissionResponseMapper, GraphSearchResponseMapper } from '../../../../common/config/Mapper';
 import { useBoolean } from '@fluentui/react-hooks';
-import { format } from 'date-fns';
 import { Person } from '@microsoft/mgt-react';
+import SharedWithColumn from './columnRender/SharedWithColumn';
+import FileExtentionColumn from './columnRender/FileExtentionColumn';
+import LinkColumn from './columnRender/LinkColumn';
+import FileDetailPanel from './panelRender/FileDetailPanel';
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
 
@@ -30,10 +32,11 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     const [fileIds, setFileIds] = useState<string[]>([]);
     const [spGroups, setSpGroups] = useState<string[]>();
 
-    const [hideSharingSettingsDialog, setHideSharingSettingsDialog] = useState<boolean>(true);
-    const [selectedDocument, setSelectedDocument] = useState<IFileSharingResponse>();
+    // const [hideSharingSettingsDialog, setHideSharingSettingsDialog] = useState<boolean>(true);
+    const [selectedDocument, setSelectedDocument] = useState<IFileSharingResponse[]>([]);
 
-    const [isFilterOpen, { setTrue: openFilterPanel, setFalse: dismissFilterPanel }] = useBoolean(false);
+    const [isFilterPanelOpen, { setTrue: openFilterPanel, setFalse: dismissFilterPanel }] = useBoolean(false);
+    // const [isFileDetailPanelOpen, { setTrue: openFileDetailPanel, setFalse: dismissFileDetailPanel }] = useBoolean(false);
 
     // let searchItems: Record<string, any> = [];
     const [searchItems, setSearchItems] = useState<IListItemSearchResponse[]>([]);
@@ -42,6 +45,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
 
+    console.log("FazLog ~ loading:", loading);
     console.log("FazLog ~ render ~ searchItems:", loading, error);
     const loadPage = async (paramFileIds: string[]): Promise<void> => {
         try {
@@ -122,7 +126,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 const searchReqForDocs: SearchRequest = {
                     entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
                     query: {
-                        queryString: `${SearchQueryGeneratorForDocs(governContext.webpartContext)}`
+                        queryString: `${searchQueryGeneratorForDocs(governContext.webpartContext)}`
                     },
                     fields: _CONST.GraphSearch.DocsSearch.Fields,
                     from: 0,
@@ -147,7 +151,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         init().catch(error => console.error("Error during initialization:", error));
     }, []);
 
-    const columns = [
+    const _columns: IColumn[] = [
         {
             key: 'FileExtension',
             name: 'FileExtension',
@@ -155,7 +159,8 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             minWidth: 16,
             maxWidth: 16,
             isIconOnly: true,
-            isResizable: false
+            isResizable: false,
+            onRender: (item: IFileSharingResponse) => <FileExtentionColumn ext={item.FileExtension} />
         },
         {
             key: 'FileName',
@@ -164,12 +169,12 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             minWidth: 100,
             maxWidth: 200,
             isResizable: true,
-            //isSorted: true,
             isSortedDescending: false,
             isRowHeader: true,
             sortAscendingAriaLabel: 'Sorted A to Z',
             sortDescendingAriaLabel: 'Sorted Z to A',
-            data: 'string'
+            data: 'string',
+            onRender: (item: IFileSharingResponse) => <LinkColumn label={item.FileName} url={item.Url} />
         },
         {
             key: 'Channel',
@@ -178,8 +183,19 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             minWidth: 100,
             maxWidth: 150,
             isResizable: true,
-            data: 'string'
+            data: 'string',
+            onRender: (item: IFileSharingResponse) => <LinkColumn label={item.Channel} url={item.FolderUrl} />
         },
+        {
+            key: 'SharedWith',
+            name: 'Shared',
+            fieldName: 'SharedWith',
+            minWidth: 150,
+            maxWidth: 185,
+            isResizable: true,
+            onRender: (item: IFileSharingResponse) => <SharedWithColumn sharedWith={item.SharedWith} sharedType={item.SharedType} />
+        },
+
         {
             key: 'LastModified',
             name: 'Modified',
@@ -191,53 +207,22 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             onRender: (item: IFileSharingResponse) => {
                 return <div>
                     {/* {item.LastModifiedBy?.displayName} */}
-                    <Person personQuery="me" view="twolines" personCardInteraction="hover" />
-                    <br />
-                    {format(new Date(item.LastModified), 'dd-MMM-yyyy')}
+                    {item.LastModifiedBy && item.LastModifiedBy.id && <Person personQuery={item.LastModifiedBy.id} view="oneline" />}
+                    <Text style={{ marginLeft: 36 }} variant="small">{moment(item.LastModified).format('LL')}</Text>
+                    {/* <br />
+                    {format(new Date(item.LastModified), 'dd-MMM-yyyy')} */}
                 </div>
             },
         },
-        {
-            key: 'SharedWith',
-            name: 'Shared',
-            fieldName: 'SharedWith',
-            minWidth: 150,
-            maxWidth: 185,
-            isResizable: true,
-            onRender: (item: IFileSharingResponse) => {
-                if (item.SharedWith === null)
-                    return <span />;
-                if (item.SharedWith.length > 1) {
-                    return <Facepile
-                        personaSize={PersonaSize.size24}
-                        maxDisplayablePersonas={5}
-                        personas={item.SharedWith}
-                        overflowButtonType={OverflowButtonType.descriptive}
-                        overflowButtonProps={{
-                            ariaLabel: 'More users'
-                        }}
-                        ariaDescription="List of people who has been shared with."
-                        ariaLabel="List of people who has been shared with."
-                    />
-                }
-                else {
-                    switch (item.SharingUserType) {
-                        case "Link": return <Persona text={`${item.SharedWith[0].personaName}`} hidePersonaDetails={true} size={PersonaSize.size24} />; break;
-                        default:
-                            return <Persona text={`${item.SharedWith[0].personaName}`} hidePersonaDetails={true} size={PersonaSize.size24} />; break;
-                    }
-                }
-            },
-        },
-        {
-            key: 'SharingUserType',
-            name: 'SharingUserType',
-            fieldName: 'SharingUserType',
-            minWidth: 16,
-            maxWidth: 16,
-            isIconOnly: true,
-            isResizable: false
-        },
+        // {
+        //     key: 'SharingUserType',
+        //     name: 'SharingUserType',
+        //     fieldName: 'SharingUserType',
+        //     minWidth: 16,
+        //     maxWidth: 16,
+        //     isIconOnly: true,
+        //     isResizable: false
+        // },
         {
             key: 'SiteUrl',
             name: 'Site',
@@ -245,64 +230,33 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             minWidth: 100,
             maxWidth: 150,
             isResizable: true,
-            data: 'string'
+            data: 'string',
+            onRender: (item: IFileSharingResponse) => {
+                const siteName = item.SiteUrl.split("/")[4];
+                return <LinkColumn label={siteName} url={item.SiteUrl} />;
+            }
         },
+        {
+            key: "Action",
+            name: "",
+            minWidth: 12,
+            onRender: (item: IFileSharingResponse) => {
+                return <ActionButton iconProps={{ iconName: 'View' }} onClick={() => setSelectedDocument([item])} />
+            }
+        }
     ];
 
-    const _renderItemColumn = (item: IFileSharingResponse, index: number, column: IColumn): React.ReactNode => {
-        const fieldContent = item[column.fieldName as keyof IFileSharingResponse] as string;
 
-        // in here we're going to make the column render differently based on the column name
-        switch (column.key) {
-            case 'FileExtension':
-                switch (item.FileExtension) {
-                    case "folder": return <Icon {...getFileTypeIconProps({ type: FileIconType.documentsFolder, size: 16, imageFileType: 'png' })} />; break;
-                    default: return <Icon {...getFileTypeIconProps({ extension: `${item.FileExtension}`, size: 16, imageFileType: 'png' })} />; break;
-                }
-            case 'SharingUserType':
-                switch (item.SharingUserType) {
-                    case "Guest": return <TooltipHost content="Shared with guest/external users" id="guestTip">
-                        <Icon aria-label="SecurityGroup" aria-describedby="guestTip" iconName="SecurityGroup" id="Guest" />
-                    </TooltipHost>; break;
-                    case "Everyone": return <TooltipHost content="Shared with everyone" id="everyoneTip">
-                        <Icon aria-label="Family" aria-describedby="everyoneTip" iconName="Family" id="Family" />
-                    </TooltipHost>; break;
-                    case "Member": return <span />;
-                    case "Link": return <TooltipHost content="Shared with organization" id="everyoneTip">
-                        <Icon aria-label="Family" aria-describedby="everyoneTip" iconName="Family" id="Family" />
-                    </TooltipHost>; break;
-                    case "Inherited": return <TooltipHost content="Shared by inheritance" id="inheritedTip">
-                        <Icon aria-label="PartyLeader" aria-describedby="inheritedTip" iconName="PartyLeader" id="PartyLeader" />
-                    </TooltipHost>; break;
-                }
-                break;
-            case 'LastModified':
-                return <span>{moment(item.LastModified).format('LL')}</span>; break;
-            case 'FileName':
-                return <span><Text><Link href={`${item.Url}`}>{`${item.FileName}`}</Link></Text></span>; break;
-            case 'Channel':
-                return <span><Text><Link href={`${item.FolderUrl}`}>{`${item.Channel}`}</Link></Text></span>; break;
-            default:
-                return <span>{fieldContent}</span>; break;
-        }
-    }
+    // const _handleItemInvoked = (item: IFileSharingResponse): void => {
+    //     setSelectedDocument([item]);
 
-    const _loadSharingDialogDetails = (): void => {
-        alert("test");
-        console.log("FazLog ~ selectedDocument:", selectedDocument);
-        setHideSharingSettingsDialog(false);
-    }
-
-    const _handleItemInvoked = (item: IFileSharingResponse): void => {
-        console.log("FazLog ~ item:", item);
-        setSelectedDocument(item);
-
-    }
+    // }
 
     const _selection = new Selection({
         onSelectionChanged: () => {
-
-        }
+            setSelectedDocument(_selection.getSelection());
+        },
+        getKey: (item: IFileSharingResponse) => item.FileId,
     });
 
 
@@ -315,7 +269,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                     'share': {
                         title: 'Sharing Settings',
                         iconName: 'Share',
-                        onClick: () => _loadSharingDialogDetails()
+                        // onClick: () => openFileDetailPanel()
                     }
                 }
             }}
@@ -340,7 +294,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                         <DefaultButton text="Filter" onClick={openFilterPanel} />
                         <Panel
                             headerText="Filter"
-                            isOpen={isFilterOpen}
+                            isOpen={isFilterPanelOpen}
                             onDismiss={dismissFilterPanel}
                             closeButtonAriaLabel="Close"
                         >
@@ -350,37 +304,30 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 </Stack>
             </div>
 
-            {selectedDocument &&
-                <IFrameDialog
-                    url={`${selectedDocument.SiteUrl}/_layouts/15/sharedialog.aspx?listId=${selectedDocument.ListId}&listItemId=${selectedDocument.ListItemId}&clientId=sharePoint&mode=manageAccess&ma=0`}
-                    // iframeOnLoad={this._onIframeLoaded.bind(this)}
-                    hidden={hideSharingSettingsDialog}
-                    onDismiss={() => setHideSharingSettingsDialog(true)}
-                    modalProps={{
-                        isBlocking: false
-                    }}
-                    dialogContentProps={{
-                        type: DialogType.close,
-                        showCloseButton: false
-                    }}
-                    width={'570px'}
-                    height={'815px'}
-                />
+            {selectedDocument?.length > 0 &&
+
+                <FileDetailPanel
+                    isOpen={selectedDocument?.length > 0}
+                    file={selectedDocument[0]}
+                    onDismiss={() => {
+                        // dismissFileDetailPanel();
+                        setSelectedDocument([]);
+                    }
+                    } />
             }
 
 
-            <MarqueeSelection selection={_selection}>
-                <ShimmeredDetailsList
-                    // usePageCache={true}
-                    columns={columns}
-                    // enableShimmer={(!loading)}
-                    items={sharedFiles}
-                    //selection={selectedDocument}
-                    selectionMode={SelectionMode.single}
-                    onRenderItemColumn={_renderItemColumn}
-                    onItemInvoked={(item) => _handleItemInvoked(item)}
-                />
-            </MarqueeSelection>
+            <ShimmeredDetailsList
+                enableShimmer={loading}
+                // usePageCache={true}
+                columns={_columns}
+                items={sharedFiles}
+                selectionMode={SelectionMode.none}
+            // selection={_selection as unknown as ISelection<IObjectWithKey>}
+            // selectionMode={SelectionMode.single}
+            // onRenderItemColumn={_renderItemColumn}
+            // onItemInvoked={(item) => _handleItemInvoked(item)}
+            />
             <Pagination
                 key="files"
                 currentPage={currentPage || 1}
