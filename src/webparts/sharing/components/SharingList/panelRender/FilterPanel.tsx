@@ -1,5 +1,4 @@
 
-
 import * as React from 'react'
 import { Checkbox, DefaultButton, Label, Panel, PrimaryButton } from '@fluentui/react';
 import { useState } from 'react';
@@ -23,7 +22,6 @@ interface IFilterPanelProps {
 const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
     const [filtreVal, setFilterVal] = useState<IFilterItem>(props.filterItem);
-    console.log("FazLog ~ filtreVal:", filtreVal);
 
     return <div>
         <Panel
@@ -34,10 +32,12 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
             onRenderFooterContent={() =>
                 <div>
                     <PrimaryButton onClick={() => {
-                        setFilterVal(props.filterItem);
                         props.onDismissFilterPanel(filtreVal);
                     }}>Apply</PrimaryButton>
-                    <DefaultButton style={{ marginLeft: 16 }} onClick={() => props.onDismissFilterPanel()}>Close</DefaultButton>
+                    <DefaultButton style={{ marginLeft: 16 }} onClick={() => {
+                        setFilterVal(props.filterItem);
+                        props.onDismissFilterPanel();
+                    }}>Cancel</DefaultButton>
                 </div>}
             isFooterAtBottom={true}
         >

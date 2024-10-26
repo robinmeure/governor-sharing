@@ -49,16 +49,16 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>("");
 
-    const loadPage = async (paramFileIds: string[]): Promise<void> => {
+    const loadPage = async (paramFileIds: string[], pageToProcess: number): Promise<void> => {
         try {
-            setLoading(true);
-            const lastIndex = currentPage ? currentPage * governContext.pageLimit : 1;
+            setCurrentPage(pageToProcess);
+            const lastIndex = pageToProcess ? pageToProcess * governContext.pageLimit : 1;
             const firstIndex = lastIndex - governContext.pageLimit;
             const paginatedItems = paramFileIds.slice(firstIndex, lastIndex);
+            setTotalPages(Math.ceil(paramFileIds.length / governContext.pageLimit));
 
             if (paginatedItems.length === 0) {
                 console.log("No items to display");
-                setLoading(false);
                 return;
             }
 
@@ -94,7 +94,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 });
 
                 if (!sharedResults) {
-                    setLoading(false);
                     return;
                 }
                 const sharingLinks = sharedResults.filter(result => result.SharedWith !== null);
@@ -106,14 +105,14 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         } catch (error) {
             console.error("Error loading page:", error);
             setError("Error loading page");
-        } finally {
-            setLoading(false);
         }
     };
 
-    const getFiles = async (queryText: string): Promise<string[]> => {
-
+    const getFilesAndLoadPages = async (queryText: string): Promise<void> => {
         try {
+            setLoading(true);
+
+
             const searchReqForDocs: SearchRequest = {
                 entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
                 query: {
@@ -127,34 +126,59 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             const searchResponse = await getByGraphSearch(searchReqForDocs);
             const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
             console.log("FazLog ~ init:", locSearchItems);
+
+
+
             setSearchItems(locSearchItems);
             // get all file ids
             const locFileIds = locSearchItems.map((item) => item.FileId);
+            await loadPage(locFileIds, 1);
             setFileIds(locFileIds);
 
-            return locFileIds;
+            setLoading(false);
 
             // await loadPage(locFileIds);
 
+            // return locFileIds;
         } catch (error) {
             console.log("FazLog ~ getFiles ~ error:", error);
+            setLoading(false);
             setError(error);
             throw error;
         }
     }
 
-    useEffect(() => {
-        if (currentPage !== undefined) {
-            loadPage(fileIds).catch(error => console.error("Error loading page:", error));
-        }
-    }, [currentPage]);
+    // const _requestSharingDetails = async (): Promise<void> => {
+    //     try {
+    //         setLoading(true);
+    //         await getFilesAndLoadPages("");
+    //         // await loadPage(locFileIds, 1);
+    //         setLoading(false);
+    //     } catch (error) {
+    //         console.log("FazLog ~ error:", error);
+    //         throw error;
+    //     }
+    // }
+
+    // useEffect(() => {
+    //     if (currentPage !== undefined) {
+    //         loadPage(fileIds).catch(error => console.error("Error loading page:", error));
+    //     }
+    // }, [currentPage]);
 
     useEffect(() => {
         const init = async (): Promise<void> => {
-            const locFileIds = await getFiles("");
-            setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-            setCurrentPage(1);
-            await loadPage(locFileIds);
+
+            try {
+                await getFilesAndLoadPages("");
+                // setLoading(true);
+                // const locFileIds = await getFiles("");
+                // setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
+                // setCurrentPage(1);
+                // await loadPage(locFileIds);
+            } catch (error) {
+                console.log("FazLog ~ init ~ error:", error);
+            }
         };
         init().catch(error => console.error("Error during initialization:", error));
     }, []);
@@ -289,17 +313,21 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                             // onChange={(e, newVal) => setSearchKeyword(newVal ? newVal : "")}
                             onSearch={async (val) => {
                                 console.log("FazLog ~ val:", val);
-                                const locFileIds = await getFiles(val);
-                                setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-                                setCurrentPage(1);
-                                await loadPage(locFileIds);
+                                // const locFileIds = await getFiles(val);
+                                // setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
+                                // setCurrentPage(1);
+                                // await loadPage(locFileIds);
+
+                                await getFilesAndLoadPages(val);
                             }}
                             onClear={async () => {
 
-                                const locFileIds = await getFiles("");
-                                setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-                                setCurrentPage(1);
-                                await loadPage(locFileIds);
+                                // const locFileIds = await getFiles("");
+                                // setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
+                                // setCurrentPage(1);
+                                // await loadPage(locFileIds);
+
+                                await getFilesAndLoadPages("");
                             }}
                         />
                     </Stack.Item>
@@ -309,14 +337,10 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                             filterItem={filtreVal}
                             isFilterPanelOpen={isFilterPanelOpen}
                             onDismissFilterPanel={(newFilter) => {
-                                dismissFilterPanel();
                                 if (newFilter) {
-                                    setFilterVal({
-                                        siteUrl: newFilter.siteUrl,
-                                        sharedType: newFilter.sharedType,
-                                        modifiedBy: newFilter.modifiedBy
-                                    });
+                                    setFilterVal(newFilter);
                                 }
+                                dismissFilterPanel();
                             }} />
                     </Stack>
                 </Stack>
@@ -353,8 +377,9 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 key="files"
                 currentPage={currentPage || 1}
                 totalPages={totalPages}
-                onChange={(page) => {
-                    setCurrentPage(page);
+                onChange={async (page) => {
+                    await loadPage(fileIds, page);
+                    // setCurrentPage(page);
                 }}
                 limiter={3}
                 hideFirstPageJump
