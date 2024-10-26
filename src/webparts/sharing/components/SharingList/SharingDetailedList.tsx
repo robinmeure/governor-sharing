@@ -20,7 +20,12 @@ import LinkColumn from './columnRender/LinkColumn';
 import FileDetailPanel from './panelRender/FileDetailPanel';
 import FilterPanel, { IFilterItem } from './panelRender/FilterPanel';
 
-const SharingDetailedList: React.FC = (): JSX.Element => {
+
+interface ISharingDetailedListProps {
+    sharedFiles: IFileSharingResponse[];
+}
+
+const SharingDetailedList: React.FC<ISharingDetailedListProps> = (props): JSX.Element => {
 
     const governContext = useContext(SharingWebPartContext);
 

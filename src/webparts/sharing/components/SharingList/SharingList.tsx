@@ -8,7 +8,7 @@ const SharingList: React.FC = (): JSX.Element => {
 
 
     return <>
-        <SharingDetailedList />
+        <SharingDetailedList sharedFiles={[]} />
     </>;
 };
 
