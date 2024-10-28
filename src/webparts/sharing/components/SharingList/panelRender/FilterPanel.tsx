@@ -1,6 +1,6 @@
 
 import * as React from 'react'
-import { Checkbox, DefaultButton, Label, Panel, PrimaryButton } from '@fluentui/react';
+import { Checkbox, DefaultButton, Label, Panel, PrimaryButton, TextField } from '@fluentui/react';
 import { useState } from 'react';
 import { SharedType } from '../../../../../common/model';
 
@@ -12,6 +12,9 @@ export interface IFilterItem {
 
 }
 
+
+
+
 interface IFilterPanelProps {
     filterItem: IFilterItem;
     isFilterPanelOpen: boolean;
@@ -21,7 +24,40 @@ interface IFilterPanelProps {
 
 const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
+    // const { getByGraphSearch } = useGraphService(governContext.webpartContext);
     const [filtreVal, setFilterVal] = useState<IFilterItem>(props.filterItem);
+
+    // const [siteFilterOptions, setSiteFilterOptions] = useState<IDropdownOption[]>([]);
+
+    // useEffect(() => {
+    //     const getFilerValues = async (): Promise<void> => {
+    //         try {
+    //             const searchReqForSites: SearchRequest = {
+    //                 entityTypes: _CONST.GraphSearch.SiteSearch.EntityType,
+    //                 query: {
+    //                     queryString: "*"
+    //                 },
+    //                 from: 0,
+    //                 size: 500
+    //             };
+    //             const siteSearchRes = await getByGraphSearch(searchReqForSites);
+    //             console.log("FazLog ~ init ~ siteSearchRes:", siteSearchRes);
+    //             const locSearchItems = GraphSearchResponseMapper<ISiteSearchResponse>(siteSearchRes, _CONST.GraphSearch.SiteSearch.EntityType);
+    //             console.log("FazLog ~ init ~ locSearchItems:", locSearchItems);
+    //             const siteOptions = locSearchItems.map(item => {
+    //                 return {
+    //                     key: item.url,
+    //                     text: item.name
+    //                 }
+    //             });
+    //             setSiteFilterOptions(siteOptions);
+
+    //         } catch (error) {
+    //             console.log("FazLog ~ getFilerValues ~ error:", error);
+    //         }
+    //     }
+    //     getFilerValues().catch(error => console.log("FazLog ~ init ~ error", error));
+    // }, []);
 
     return <div>
         <Panel
@@ -42,6 +78,20 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
             isFooterAtBottom={true}
         >
             <div>
+
+                <div>
+                    <Label>Site Url</Label>
+                    <div>
+                        <TextField
+                            multiline
+                            resizable={false}
+                            value={filtreVal.siteUrl}
+                            onChange={(e, newVal = '') => setFilterVal({ ...filtreVal, siteUrl: newVal })}
+                            placeholder={`https://contoso.sharepoint.com/sites/...`}
+                            description="Url of the site" />
+                    </div>
+
+                </div>
 
                 <div>
                     <Label>Shared Type</Label>

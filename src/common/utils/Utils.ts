@@ -4,6 +4,7 @@ import { IFacepilePersona } from '@fluentui/react';
 import { SharePointIdentitySet } from '@microsoft/microsoft-graph-types';
 import { isEqual } from '@microsoft/sp-lodash-subset';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
+import { IPaginationFilterState } from '../../webparts/sharing/components/SharingList/SharingDetailedList';
 
 
 // need to rework this sorting method to be a) working with dates and b) be case insensitive
@@ -142,11 +143,17 @@ export function processUsers(users: string): IFacepilePersona[] {
 }
 
 
-export const searchQueryGeneratorForDocs = (context: WebPartContext, searchVal: string): string => {
+export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter: IPaginationFilterState): string => {
   try {
+    const filterVal = queryFilter.filterVal;
     const tenantId = context.pageContext.aadInfo.tenantId;
+
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
-    let query = `${searchVal} (IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+    const searchQuery = queryFilter.searchQuery ? queryFilter.searchQuery + " " : "";
+    const siteFilter = filterVal.siteUrl ? `(SPSiteUrl:${filterVal.siteUrl}) ` : "";
+
+    let query = `${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+
     // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
     let isTeams = false, isPrivateChannel = false;
     let groupId = "";

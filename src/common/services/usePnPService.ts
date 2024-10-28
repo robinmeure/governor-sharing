@@ -1,21 +1,14 @@
 
 import { ApplicationCustomizerContext } from "@microsoft/sp-application-base";
-import { SPFI, spfi } from '@pnp/sp';
+import { ISPFXContext, spfi, SPFx } from '@pnp/sp';
 import "@pnp/sp/webs";
-import "@pnp/sp/lists";
-import "@pnp/sp/items";
 import "@pnp/sp/site-users/web";
-import "@pnp/sp/files/web";
 import "@pnp/sp/site-groups/web";
-import "@pnp/graph/search";
 import { Logger, LogLevel } from '@pnp/logging';
-import { Caching } from '@pnp/queryable';
-import { GraphFI, graphfi } from '@pnp/graph';
-import { getGraph, getSP } from '../config/PnPjsConfig';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 
 interface IPnPService {
-    getSiteGroups(): Promise<string[]>;
+    getSiteGroups(targetSite: string): Promise<string[]>;
 }
 /** Represents all calls to SharePoint with help of Graph API
  * @param {WebPartContext} spfxContext - is used to make Graph API calls
@@ -23,33 +16,33 @@ interface IPnPService {
 
 export const usePnPService = (spfxContext: WebPartContext | ApplicationCustomizerContext, siteUrl?: string): IPnPService => {
 
-    const sp: SPFI = getSP(spfxContext, siteUrl);
-    const graph: GraphFI = getGraph(spfxContext, siteUrl);
+    // const sp: SPFI = getSP(spfxContext, siteUrl);
+    // const graph: GraphFI = getGraph(spfxContext, siteUrl);
 
-    const getCacheFI = <T extends "SP" | "Graph">(type: T): T extends "SP" ? SPFI : GraphFI => {
-        const cache = type === "SP" ? spfi(sp) : graphfi(graph);
-        return cache.using(Caching({ store: "session" })) as T extends "SP" ? SPFI : GraphFI;
-    }
+    // const getCacheFI = <T extends "SP" | "Graph">(type: T): T extends "SP" ? SPFI : GraphFI => {
+    //     const cache = type === "SP" ? spfi(sp) : graphfi(graph);
+    //     return cache.using(Caching({ store: "session" })) as T extends "SP" ? SPFI : GraphFI;
+    // }
 
 
-    const getSiteGroups = async (): Promise<string[]> => {
+    const getSiteGroups = async (targetSite: string): Promise<string[]> => {
 
         try {
-            const spCache = getCacheFI("SP");
-            const { Title } = await spCache.web.select("Title")();
+            const localSP = spfi(targetSite).using(SPFx(spfxContext as ISPFXContext));
+            const { Title } = await localSP.web.select("Title")();
             console.log(`Web title: ${Title}`);
             const locStandardGroups: string[] = [];
 
             // Gets the associated visitors group of a web
-            const visitorsGroup = await sp.web.associatedVisitorGroup.select("Title")();
+            const visitorsGroup = await localSP.web.associatedVisitorGroup.select("Title")();
             locStandardGroups.push(visitorsGroup.Title);
 
             // Gets the associated members group of a web
-            const membersGroup = await sp.web.associatedMemberGroup.select("Title")();
+            const membersGroup = await localSP.web.associatedMemberGroup.select("Title")();
             locStandardGroups.push(membersGroup.Title);
 
             // Gets the associated owners group of a web
-            const ownersGroup = await sp.web.associatedOwnerGroup.select("Title")();
+            const ownersGroup = await localSP.web.associatedOwnerGroup.select("Title")();
             locStandardGroups.push(ownersGroup.Title);
             return locStandardGroups;
         }

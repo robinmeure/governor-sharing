@@ -49,10 +49,8 @@ export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], e
                         }
                         locMappedVal.push(result as unknown);
                     } else if (entityType.includes("site")) {
-                        if (!hit.resource || !('site' in hit.resource)) return;
-
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const site = (hit.resource as any)?.site as Site;
+                        if (!hit.resource) return;
+                        const site = hit.resource as Site;
                         if (!site.displayName || !site.webUrl) return;
 
                         const result: ISiteSearchResponse = {

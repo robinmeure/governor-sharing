@@ -1,7 +1,7 @@
-import { Text, ShimmeredDetailsList, SearchBox, DefaultButton, Stack, ActionButton, IColumn, SelectionMode, MessageBar, MessageBarType } from '@fluentui/react';
-import * as React from 'react'
+import { Text, ShimmeredDetailsList, SearchBox, Stack, ActionButton, IColumn, SelectionMode, MessageBar, MessageBarType, Persona, PersonaSize, PrimaryButton } from '@fluentui/react';
+import * as React from 'react';
 import * as moment from 'moment';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState, useMemo } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
 import { usePnPService } from '../../../../common/services/usePnPService';
 import { Pagination } from '@pnp/spfx-controls-react';
@@ -10,10 +10,8 @@ import { SearchRequest } from '@microsoft/microsoft-graph-types';
 import { _CONST } from '../../../../common/utils/Const';
 import { useGraphService } from '../../../../common/services/useGraphService';
 import { IDriveItems, IFileSharingResponse, IListItemSearchResponse } from '../../../../common/model';
-import { Toolbar } from '@pnp/spfx-controls-react/lib/Toolbar';
 import { DrivePermissionResponseMapper, GraphSearchResponseMapper } from '../../../../common/config/Mapper';
 import { useBoolean } from '@fluentui/react-hooks';
-import { Person } from '@microsoft/mgt-react';
 import SharedWithColumn from './columnRender/SharedWithColumn';
 import FileExtentionColumn from './columnRender/FileExtentionColumn';
 import LinkColumn from './columnRender/LinkColumn';
@@ -21,108 +19,53 @@ import FileDetailPanel from './panelRender/FileDetailPanel';
 import FilterPanel, { IFilterItem } from './panelRender/FilterPanel';
 
 
-interface ISharingDetailedListProps {
-    sharedFiles: IFileSharingResponse[];
+interface ILoadingErrorState {
+    loading: boolean;
+    error: string;
 }
 
-const SharingDetailedList: React.FC<ISharingDetailedListProps> = (props): JSX.Element => {
+export interface IPaginationFilterState {
+    searchQuery: string;
+    currentPage: number;
+    totalPages: number;
+    filterVal: IFilterItem;
+    selectedDocument: IFileSharingResponse | undefined;
+}
 
+const SharingDetailedList: React.FC = (): JSX.Element => {
     const governContext = useContext(SharingWebPartContext);
+    const webpartContext = governContext.webpartContext;
+    const { getByGraphSearch, getDriveItemsPermission } = useGraphService(webpartContext);
+    const { getSiteGroups } = usePnPService(webpartContext);
 
-    const { getSiteGroups
-    } = usePnPService(governContext.webpartContext);
-    const { getByGraphSearch, getDriveItemsPermission } = useGraphService(governContext.webpartContext);
-
-    const [sharedFiles, setSharedFiles] = useState<IFileSharingResponse[]>([]);
-    const [fileIds, setFileIds] = useState<string[]>([]);
-    const [spGroups, setSpGroups] = useState<string[]>();
-
-    const [selectedDocument, setSelectedDocument] = useState<IFileSharingResponse[]>([]);
-
-    //const [searchKeyword, setSearchKeyword] = useState<string>("");
-    const [isFilterPanelOpen, { setTrue: openFilterPanel, setFalse: dismissFilterPanel }] = useBoolean(false);
-    const [filtreVal, setFilterVal] = useState<IFilterItem>({
-        siteUrl: "This the test site url",
-        sharedType: [],
-        modifiedBy: ""
+    const [loadingErrorState, setLoadingErrorState] = useState<ILoadingErrorState>({
+        loading: true,
+        error: ""
     });
 
-    // let searchItems: Record<string, any> = [];
+    const [paginationFilterState, setPaginationFilterState] = useState<IPaginationFilterState>({
+        currentPage: 1,
+        totalPages: 1,
+        filterVal: {
+            siteUrl: webpartContext.pageContext.site.absoluteUrl,
+            sharedType: [],
+            modifiedBy: ""
+        },
+        selectedDocument: undefined,
+        searchQuery: ""
+    });
+
+
     const [searchItems, setSearchItems] = useState<IListItemSearchResponse[]>([]);
-    const [currentPage, setCurrentPage] = useState<number>();
-    const [totalPages, setTotalPages] = useState<number>(1);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string>("");
+    const [sharedFiles, setSharedFiles] = useState<IFileSharingResponse[]>([]);
 
-    const loadPage = async (paramFileIds: string[], pageToProcess: number): Promise<void> => {
+    const [isFilterPanelOpen, { setTrue: openFilterPanel, setFalse: dismissFilterPanel }] = useBoolean(false);
+
+    const getFiles = async (query: IPaginationFilterState): Promise<IListItemSearchResponse[]> => {
         try {
-            setCurrentPage(pageToProcess);
-            const lastIndex = pageToProcess ? pageToProcess * governContext.pageLimit : 1;
-            const firstIndex = lastIndex - governContext.pageLimit;
-            const paginatedItems = paramFileIds.slice(firstIndex, lastIndex);
-            setTotalPages(Math.ceil(paramFileIds.length / governContext.pageLimit));
-
-            if (paginatedItems.length === 0) {
-                console.log("No items to display");
-                return;
-            }
-
-            const paginatedListItems = paginatedItems.reduce((acc, fileId) => {
-                const foundItem = searchItems.filter(item => item.FileId === fileId);
-                if (foundItem.length === 0 || !foundItem[0].DriveId || !foundItem[0].DriveId) return null;
-                acc[fileId] = {
-                    driveId: foundItem[0].DriveId || '',
-                    itemId: foundItem[0].ItemId || ''
-                };
-                return acc;
-            }, {} as Record<string, IDriveItems>);
-
-            //TODO handle this differently
-            const locSpGroups: string[] = spGroups ? spGroups : await getSiteGroups();
-            if (spGroups === undefined) {
-                setSpGroups(locSpGroups);
-            }
-            // const sharedLinkResults = await getSharingLinks(searchItems, locSpGroups);
-
-            // get searchItems where fileIds are in paginatedItems
-            const locSearchItems = searchItems.filter(item => paginatedItems.includes(item.FileId));
-            const sharedResults: IFileSharingResponse[] = [];
-            // const driveItemParam = locSearchItems.map(item => ({ driveId: item.DriveId, driveItemId: item.DriveItemId }));
-            if (paginatedListItems) {
-                const driveItems = await getDriveItemsPermission(paginatedListItems);
-
-                // now we have all the data we need, we can start building up the result
-                driveItems.forEach(driveItem => {
-                    const file = locSearchItems.filter(item => item.FileId === driveItem.fileId)[0];
-                    const locSharedResult = DrivePermissionResponseMapper(file, driveItem, locSpGroups);
-                    sharedResults.push(locSharedResult);
-                });
-
-                if (!sharedResults) {
-                    return;
-                }
-                const sharingLinks = sharedResults.filter(result => result.SharedWith !== null);
-                setSharedFiles(sharingLinks);
-            } else {
-                throw new Error("Paginated list items are null");
-            }
-
-        } catch (error) {
-            console.error("Error loading page:", error);
-            setError("Error loading page");
-        }
-    };
-
-    const getFilesAndLoadPages = async (queryText: string): Promise<void> => {
-        try {
-            setLoading(true);
-
-
             const searchReqForDocs: SearchRequest = {
                 entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
-                query: {
-                    queryString: `${searchQueryGeneratorForDocs(governContext.webpartContext, queryText)}`
-                },
+                query: { queryString: searchQueryGeneratorForDocs(webpartContext, query) },
                 fields: _CONST.GraphSearch.DocsSearch.Fields,
                 from: 0,
                 size: 500
@@ -130,65 +73,88 @@ const SharingDetailedList: React.FC<ISharingDetailedListProps> = (props): JSX.El
 
             const searchResponse = await getByGraphSearch(searchReqForDocs);
             const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
-            console.log("FazLog ~ init:", locSearchItems);
-
-
-
-            setSearchItems(locSearchItems);
-            // get all file ids
-            const locFileIds = locSearchItems.map((item) => item.FileId);
-            await loadPage(locFileIds, 1);
-            setFileIds(locFileIds);
-
-            setLoading(false);
-
-            // await loadPage(locFileIds);
-
-            // return locFileIds;
+            return locSearchItems;
         } catch (error) {
-            console.log("FazLog ~ getFiles ~ error:", error);
-            setLoading(false);
-            setError(error);
+            console.error("FazLog ~ getFiles ~ error:", error);
+            setLoadingErrorState(prevState => ({ ...prevState, error: "Error fetching files", loading: false }));
             throw error;
         }
-    }
+    };
 
-    // const _requestSharingDetails = async (): Promise<void> => {
-    //     try {
-    //         setLoading(true);
-    //         await getFilesAndLoadPages("");
-    //         // await loadPage(locFileIds, 1);
-    //         setLoading(false);
-    //     } catch (error) {
-    //         console.log("FazLog ~ error:", error);
-    //         throw error;
-    //     }
-    // }
+    const loadPage = async (pageToProcess: number, searchItems: IListItemSearchResponse[]): Promise<void> => {
+        try {
+            if (!loadingErrorState.loading) {
+                setLoadingErrorState(prevState => ({ ...prevState, loading: true }));
+            }
+            const locFileIds = searchItems.map((item) => item.FileId);
+            const lastIndex = pageToProcess * governContext.pageLimit;
+            const firstIndex = lastIndex - governContext.pageLimit;
+            const paginatedItems = locFileIds.slice(firstIndex, lastIndex);
+            setPaginationFilterState(prevState => ({ ...prevState, totalPages: Math.ceil(locFileIds.length / governContext.pageLimit) }));
 
-    // useEffect(() => {
-    //     if (currentPage !== undefined) {
-    //         loadPage(fileIds).catch(error => console.error("Error loading page:", error));
-    //     }
-    // }, [currentPage]);
+            const locSpGroups: string[] = await getSiteGroups(paginationFilterState.filterVal.siteUrl);
+            console.log("FazLog ~ loadPage ~ locSpGroups:", locSpGroups);
+
+            if (paginatedItems.length === 0) {
+                setSharedFiles([]);
+                setLoadingErrorState(prevState => ({ ...prevState, loading: false }));
+                return;
+            }
+
+            const paginatedListItems = paginatedItems.reduce((acc, fileId) => {
+                const foundItem = searchItems.find((item: IListItemSearchResponse) => item.FileId === fileId);
+                if (foundItem && foundItem.DriveId) {
+                    acc[fileId] = { driveId: foundItem.DriveId, itemId: foundItem.ItemId };
+                }
+                return acc;
+            }, {} as Record<string, IDriveItems>);
+
+            // const locSpGroups: string[] = await pnpService.getSiteGroups();
+            // console.log("FazLog ~ loadPage ~ locSpGroups:", locSpGroups);
+
+            const locSearchItems = searchItems.filter(item => paginatedItems.includes(item.FileId));
+            const driveItems = await getDriveItemsPermission(paginatedListItems);
+            const sharedResults = driveItems.map(driveItem => {
+                const file = locSearchItems.find(item => item.FileId === driveItem.fileId);
+                return file ? DrivePermissionResponseMapper(file, driveItem, locSpGroups) : null;
+            }).filter(Boolean) as IFileSharingResponse[];
+
+            setSharedFiles(sharedResults.filter(result => result.SharedWith !== null));
+            setLoadingErrorState(prevState => ({ ...prevState, loading: false }));
+        } catch (error) {
+            console.error("Error loading page:", error);
+            setLoadingErrorState(prevState => ({ ...prevState, error: "Error loading page", loading: false }));
+        }
+    };
+
+    const getFilesAndLoadPages = async (query: IPaginationFilterState): Promise<void> => {
+        try {
+            setLoadingErrorState(prevState => ({ ...prevState, loading: true }));
+            const locSearchVals = await getFiles(query);
+            setSearchItems(locSearchVals);
+            await loadPage(1, locSearchVals);
+            setLoadingErrorState(prevState => ({ ...prevState, loading: false }));
+        } catch (error) {
+            console.error("FazLog ~ getFilesAndLoadPages ~ error:", error);
+            setLoadingErrorState(prevState => ({ ...prevState, error: "Error fetching files", loading: false }));
+        }
+    };
+
+
 
     useEffect(() => {
         const init = async (): Promise<void> => {
-
             try {
-                await getFilesAndLoadPages("");
-                // setLoading(true);
-                // const locFileIds = await getFiles("");
-                // setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-                // setCurrentPage(1);
-                // await loadPage(locFileIds);
+                await getFilesAndLoadPages(paginationFilterState);
             } catch (error) {
-                console.log("FazLog ~ init ~ error:", error);
+                console.error("FazLog ~ init ~ error:", error);
             }
         };
         init().catch(error => console.error("Error during initialization:", error));
     }, []);
 
-    const _columns: IColumn[] = [
+
+    const columns: IColumn[] = useMemo(() => [
         {
             key: 'FileExtension',
             name: 'FileExtension',
@@ -237,34 +203,30 @@ const SharingDetailedList: React.FC<ISharingDetailedListProps> = (props): JSX.El
             key: 'LastModified',
             name: 'Modified',
             fieldName: 'LastModified',
-            minWidth: 70,
-            maxWidth: 90,
+            minWidth: 120,
+            maxWidth: 170,
             isResizable: true,
             isPadded: true,
-            onRender: (item: IFileSharingResponse) => {
-                return <div>
-                    {/* {item.LastModifiedBy?.displayName} */}
-                    {item.LastModifiedBy && item.LastModifiedBy.id && <Person personQuery={item.LastModifiedBy.id} view="oneline" />}
+            onRender: (item: IFileSharingResponse) => (
+                <div>
+                    {item.LastModifiedBy?.id &&
+                        <Persona
+                            size={PersonaSize.size24}
+                            imageAlt={item.LastModifiedBy?.displayName || ''}
+                            imageUrl={`${window.location.origin}/_layouts/15/userphoto.aspx?size=M&username=${item.LastModifiedBy?.id}`}
+                            text={item.LastModifiedBy?.displayName || ''}
+                            secondaryText={item.LastModifiedBy?.id}
+                        />
+                    }
                     <Text style={{ marginLeft: 36 }} variant="small">{moment(item.LastModified).format('LL')}</Text>
-                    {/* <br />
-                    {format(new Date(item.LastModified), 'dd-MMM-yyyy')} */}
                 </div>
-            },
+            ),
         },
-        // {
-        //     key: 'SharingUserType',
-        //     name: 'SharingUserType',
-        //     fieldName: 'SharingUserType',
-        //     minWidth: 16,
-        //     maxWidth: 16,
-        //     isIconOnly: true,
-        //     isResizable: false
-        // },
         {
             key: 'SiteUrl',
             name: 'Site',
             fieldName: 'SiteUrl',
-            minWidth: 100,
+            minWidth: 120,
             maxWidth: 150,
             isResizable: true,
             data: 'string',
@@ -276,123 +238,115 @@ const SharingDetailedList: React.FC<ISharingDetailedListProps> = (props): JSX.El
         {
             key: "Action",
             name: "",
-            minWidth: 12,
-            onRender: (item: IFileSharingResponse) => {
-                return <ActionButton iconProps={{ iconName: 'View' }} onClick={() => setSelectedDocument([item])} />
-            }
+            minWidth: 4,
+            onRender: (item: IFileSharingResponse) => (
+                <ActionButton iconProps={{ iconName: 'View' }} onClick={() => setPaginationFilterState(prevState => ({ ...prevState, selectedDocument: item }))} />
+            )
         }
-    ];
+    ], []);
 
-    if (!loading && error) {
-        return <div>
-            <MessageBar messageBarType={MessageBarType.error}>
-                Something went wrong - {error}
-            </MessageBar>
-        </div>
+    if (!loadingErrorState.loading && loadingErrorState.error) {
+        return (
+            <div>
+                <MessageBar messageBarType={MessageBarType.error}>
+                    Something went wrong - {loadingErrorState.error}
+                </MessageBar>
+            </div>
+        );
     }
 
     return (
         <div>
-            <Toolbar actionGroups={{
-                'share': {
-                    'share': {
-                        title: 'Sharing Settings',
-                        iconName: 'Share',
-                    }
-                }
-            }}
-                filters={[
-                    {
-                        id: "f1",
-                        title: "Guest/External Users",
-                    }]}
-                find={true}
-            />
             <div>
                 <Stack horizontal horizontalAlign="space-between">
                     <Stack.Item grow={3}>
                         <SearchBox
                             placeholder="Search..."
                             underlined={true}
-                            //value={searchKeyword}
-                            // onChange={(e, newVal) => setSearchKeyword(newVal ? newVal : "")}
-                            onSearch={async (val) => {
-                                console.log("FazLog ~ val:", val);
-                                // const locFileIds = await getFiles(val);
-                                // setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-                                // setCurrentPage(1);
-                                // await loadPage(locFileIds);
-
-                                await getFilesAndLoadPages(val);
+                            onSearch={async (val: string) => {
+                                const updatedFilter: IPaginationFilterState = {
+                                    ...paginationFilterState,
+                                    searchQuery: val
+                                };
+                                setPaginationFilterState(updatedFilter);
+                                await getFilesAndLoadPages(updatedFilter);
                             }}
                             onClear={async () => {
-
-                                // const locFileIds = await getFiles("");
-                                // setTotalPages(Math.ceil(locFileIds.length / governContext.pageLimit));
-                                // setCurrentPage(1);
-                                // await loadPage(locFileIds);
-
-                                await getFilesAndLoadPages("");
+                                const updatedFilter: IPaginationFilterState = {
+                                    ...paginationFilterState,
+                                    searchQuery: ""
+                                };
+                                setPaginationFilterState(updatedFilter);
+                                await getFilesAndLoadPages(updatedFilter);
                             }}
                         />
                     </Stack.Item>
                     <Stack horizontalAlign="end" style={{ marginLeft: 12 }}>
-                        <DefaultButton text="Filter" onClick={openFilterPanel} />
+                        <PrimaryButton text="Filter" onClick={openFilterPanel} />
                         <FilterPanel
-                            filterItem={filtreVal}
+                            filterItem={paginationFilterState.filterVal}
                             isFilterPanelOpen={isFilterPanelOpen}
-                            onDismissFilterPanel={(newFilter) => {
-                                if (newFilter) {
-                                    setFilterVal(newFilter);
-                                }
+                            onDismissFilterPanel={async (newFilter) => {
                                 dismissFilterPanel();
-                            }} />
+                                if (newFilter) {
+                                    console.log("FazLog ~ onDismissFilterPanel={ ~ newFilter:", newFilter);
+                                    const updatedFilter: IPaginationFilterState = {
+                                        ...paginationFilterState,
+                                        filterVal: newFilter,
+                                        currentPage: 1
+                                    };
+                                    await getFilesAndLoadPages(updatedFilter);
+                                    setPaginationFilterState(prevState => ({ ...prevState, filterVal: newFilter }))
+                                }
+                            }}
+                        />
                     </Stack>
                 </Stack>
             </div>
 
-            {selectedDocument?.length > 0 &&
+            {paginationFilterState.selectedDocument && (
                 <FileDetailPanel
-                    isOpen={selectedDocument?.length > 0}
-                    file={selectedDocument[0]}
-                    onDismiss={() => {
-                        // dismissFileDetailPanel();
-                        setSelectedDocument([]);
+                    isOpen={!!paginationFilterState.selectedDocument}
+                    file={paginationFilterState.selectedDocument}
+                    onDismiss={() => setPaginationFilterState(prevState => ({ ...prevState, selectedDocument: undefined }))}
+                />
+            )}
+
+            {!loadingErrorState.loading && sharedFiles.length === 0 && (
+                <div style={{ padding: "12px 0" }}>
+                    <MessageBar messageBarType={MessageBarType.info}>
+                        No shared files found.
+                    </MessageBar>
+                </div>
+            )}
+
+            {(loadingErrorState.loading || sharedFiles.length > 0) && <>
+                <ShimmeredDetailsList
+                    enableShimmer={loadingErrorState.loading}
+                    usePageCache={true}
+                    columns={columns}
+                    items={sharedFiles}
+                    selectionMode={SelectionMode.none}
+                />
+
+                <Pagination
+                    key="files"
+                    currentPage={paginationFilterState.currentPage || 1}
+                    totalPages={paginationFilterState.totalPages}
+                    onChange={async (page) => {
+                        setPaginationFilterState(prevState => ({ ...prevState, currentPage: page }));
+                        await loadPage(page, searchItems)
                     }
-                    } />
-            }
-
-            {!loading && sharedFiles.length === 0 && <div>
-                <MessageBar messageBarType={MessageBarType.info}>
-                    { }
-                </MessageBar>
-            </div>}
+                    }
+                    limiter={4}
+                    hideFirstPageJump
+                    hideLastPageJump
+                />
+            </>}
 
 
-            <ShimmeredDetailsList
-                enableShimmer={loading}
-                usePageCache={true}
-                columns={_columns}
-                items={sharedFiles}
-                selectionMode={SelectionMode.none}
-            />
-
-
-            <Pagination
-                key="files"
-                currentPage={currentPage || 1}
-                totalPages={totalPages}
-                onChange={async (page) => {
-                    await loadPage(fileIds, page);
-                    // setCurrentPage(page);
-                }}
-                limiter={3}
-                hideFirstPageJump
-                hideLastPageJump
-                limiterIcon={"Emoji12"}
-            />
         </div>
-    )
-}
+    );
+};
 
 export default SharingDetailedList;
