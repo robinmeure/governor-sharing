@@ -1,7 +1,7 @@
 import { IFacepilePersona } from "@fluentui/react";
 import { SearchResponse, EntityType, SearchHit, ListItem, DriveItem, Site } from "@microsoft/microsoft-graph-types";
-import { IListItemSearchResponse, ISiteSearchResponse, IFileSharingResponse, SharedType } from "../model";
-import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers, uniqForObject } from "../utils/Utils";
+import { IListItemSearchResponse, ISiteSearchResponse, IFileSharingResponse, SharedType, ISharedUser } from "../model";
+import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers } from "../utils/Utils";
 import { DrivePermissionResponse } from "../services/useGraphService";
 
 
@@ -72,9 +72,11 @@ export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], e
     }
 }
 
-export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, driveItem: DrivePermissionResponse, standardGroups: string[]): IFileSharingResponse => {
+export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, driveItem: DrivePermissionResponse): IFileSharingResponse => {
     try {
-        let sharedWithUser: IFacepilePersona[] = [];
+        const sharedWithUser: IFacepilePersona[] = [];
+        const sharedWithUser2: ISharedUser[] = [];
+
         let sharingUserType: SharedType = "Member";
 
         // Getting all the details of the file and in which folder is lives
@@ -96,6 +98,7 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
                     case "anonymous":
                         break;
                     case "organization": {
+                        // Shared through links
                         const _user: IFacepilePersona = {};
                         _user.personaName = perm.link.scope + " " + perm.link.type;
                         _user.data = "Organization";
@@ -105,6 +108,7 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
                         break;
                     }
                     case "users": {
+                        // find the the user is group or actual user
                         const _users = perm.grantedToIdentitiesV2 ? convertToFacePilePersona(perm.grantedToIdentitiesV2) : [];
                         sharedWithUser.push(..._users);
                         break;
@@ -116,7 +120,7 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
             else // checking the normal permissions as well, other than the sharing links
             {
                 // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
-                if (perm.grantedTo?.user && standardGroups.indexOf(perm.grantedTo.user.displayName || '') === -1 && perm.grantedToV2) {
+                if (perm.grantedTo?.user && perm.grantedToV2) {
                     const _users = convertUserToFacePilePersona(perm.grantedToV2);
                     sharedWithUser.push(_users);
                 }
@@ -138,7 +142,19 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
         });
         // if there are any duplicates, this will remove them (e.g. multiple organization links)
         if (sharedWithUser?.length > 0) {
-            sharedWithUser = uniqForObject(sharedWithUser);
+
+            sharedWithUser.forEach(element => {
+                const name = element.personaName || element.name || "";
+
+                sharedWithUser2.push({
+                    id: element.id || name,
+                    displayName: name,
+                    type: element.data
+                })
+            });
+
+
+
             let isGuest = false;
             let isLink = false;
             let isInherited = false;
@@ -163,7 +179,10 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
             }
         }
 
-
+        // sharedWithUser2 = uniqForObject(sharedWithUser2);
+        const uniqueUsers = Array.from(
+            new Map(sharedWithUser2.map(user => [user.displayName, user])).values()
+        );
 
         // building up the result to be returned
         const sharedResult: IFileSharingResponse =
@@ -172,7 +191,7 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
             FileName: file.FileName ?? '',
             Channel: folderName,
             LastModified: file.LastModifiedTime ?? new Date(),
-            SharedWith: sharedWithUser,
+            SharedWith: uniqueUsers,
             ListId: file.ListId ?? '',
             ListItemId: file.ListItemId ?? 0,
             Url: file.Path ?? '',

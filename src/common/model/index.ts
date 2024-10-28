@@ -1,4 +1,3 @@
-import { IFacepilePersona } from "@fluentui/react";
 import { Identity } from "@microsoft/microsoft-graph-types";
 
 export interface IDriveItems {
@@ -7,10 +6,13 @@ export interface IDriveItems {
 }
 
 
+export interface ISharedUser {
+    displayName: string,
+    id: string,
+    type: SharedType
+}
 
-export type SharedType = "Link" | "Inherited" | "Owner" | "Member" | "Guest" | "Everyone";
-
-
+export type SharedType = "Link" | "Inherited" | "Owner" | "Member" | "Guest" | "Everyone" | "Groups";
 //#region Graph API Response Interfaces
 
 
@@ -18,7 +20,7 @@ export interface IFileSharingResponse {
     FileExtension: string;
     FileName: string;
     LastModified: Date;
-    SharedWith: IFacepilePersona[];
+    SharedWith: ISharedUser[];
     ListId: string;
     ListItemId: number;
     Url: string;

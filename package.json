@@ -15,7 +15,7 @@
   "dependencies": {
     "@fluentui/react": "8.106.4",
     "@microsoft/microsoft-graph-client": "^3.0.2",
-    "@microsoft/microsoft-graph-types": "2.38.0",
+    "@microsoft/microsoft-graph-types": "2.40.0",
     "@microsoft/sp-adaptive-card-extension-base": "1.20.0",
     "@microsoft/sp-component-base": "1.20.0",
     "@microsoft/sp-core-library": "1.20.0",

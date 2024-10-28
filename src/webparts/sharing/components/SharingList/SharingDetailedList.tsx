@@ -3,7 +3,6 @@ import * as React from 'react';
 import * as moment from 'moment';
 import { useContext, useEffect, useState, useMemo } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
-import { usePnPService } from '../../../../common/services/usePnPService';
 import { Pagination } from '@pnp/spfx-controls-react';
 import { searchQueryGeneratorForDocs } from '../../../../common/utils/Utils';
 import { SearchRequest } from '@microsoft/microsoft-graph-types';
@@ -36,7 +35,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
     const governContext = useContext(SharingWebPartContext);
     const webpartContext = governContext.webpartContext;
     const { getByGraphSearch, getDriveItemsPermission } = useGraphService(webpartContext);
-    const { getSiteGroups } = usePnPService(webpartContext);
 
     const [loadingErrorState, setLoadingErrorState] = useState<ILoadingErrorState>({
         loading: true,
@@ -63,15 +61,17 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
     const getFiles = async (query: IPaginationFilterState): Promise<IListItemSearchResponse[]> => {
         try {
-            const searchReqForDocs: SearchRequest = {
+            const searchReqForDocs: SearchRequest | {} = {
                 entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
                 query: { queryString: searchQueryGeneratorForDocs(webpartContext, query) },
                 fields: _CONST.GraphSearch.DocsSearch.Fields,
                 from: 0,
-                size: 500
+                size: 500,
+                trimDuplicates: true
             };
 
             const searchResponse = await getByGraphSearch(searchReqForDocs);
+            console.log("FazLog ~ getFiles ~ searchResponse:", searchResponse);
             const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
             return locSearchItems;
         } catch (error) {
@@ -92,15 +92,14 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             const paginatedItems = locFileIds.slice(firstIndex, lastIndex);
             setPaginationFilterState(prevState => ({ ...prevState, totalPages: Math.ceil(locFileIds.length / governContext.pageLimit) }));
 
-            const locSpGroups: string[] = await getSiteGroups(paginationFilterState.filterVal.siteUrl);
-            console.log("FazLog ~ loadPage ~ locSpGroups:", locSpGroups);
+            // const locSpGroups: string[] = await getSiteGroups(paginationFilterState.filterVal.siteUrl);
+            // console.log("FazLog ~ loadPage ~ locSpGroups:", locSpGroups);
 
             if (paginatedItems.length === 0) {
                 setSharedFiles([]);
                 setLoadingErrorState(prevState => ({ ...prevState, loading: false }));
                 return;
             }
-
             const paginatedListItems = paginatedItems.reduce((acc, fileId) => {
                 const foundItem = searchItems.find((item: IListItemSearchResponse) => item.FileId === fileId);
                 if (foundItem && foundItem.DriveId) {
@@ -109,14 +108,18 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 return acc;
             }, {} as Record<string, IDriveItems>);
 
+            console.log("FazLog ~ searchItems ~ searchItems:", searchItems);
+            console.log("FazLog ~ paginatedListItems ~ paginatedListItems:", paginatedListItems);
+
             // const locSpGroups: string[] = await pnpService.getSiteGroups();
             // console.log("FazLog ~ loadPage ~ locSpGroups:", locSpGroups);
 
             const locSearchItems = searchItems.filter(item => paginatedItems.includes(item.FileId));
-            const driveItems = await getDriveItemsPermission(paginatedListItems);
-            const sharedResults = driveItems.map(driveItem => {
+            const driveItemsPermissions = await getDriveItemsPermission(paginatedListItems);
+            console.log("FazLog ~ loadPage ~ driveItemsPermissions:", driveItemsPermissions);
+            const sharedResults = driveItemsPermissions.map(driveItem => {
                 const file = locSearchItems.find(item => item.FileId === driveItem.fileId);
-                return file ? DrivePermissionResponseMapper(file, driveItem, locSpGroups) : null;
+                return file ? DrivePermissionResponseMapper(file, driveItem) : null;
             }).filter(Boolean) as IFileSharingResponse[];
 
             setSharedFiles(sharedResults.filter(result => result.SharedWith !== null));
@@ -218,7 +221,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                             secondaryText={item.LastModifiedBy?.id}
                         />
                     }
-                    <Text style={{ marginLeft: 36 }} variant="small">{moment(item.LastModified).format('LL')}</Text>
+                    <Text style={{ marginLeft: 32 }} variant="small">{moment(item.LastModified).format('LL')}</Text>
                 </div>
             ),
         },

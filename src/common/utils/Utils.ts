@@ -2,7 +2,6 @@
 
 import { IFacepilePersona } from '@fluentui/react';
 import { SharePointIdentitySet } from '@microsoft/microsoft-graph-types';
-import { isEqual } from '@microsoft/sp-lodash-subset';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
 import { IPaginationFilterState } from '../../webparts/sharing/components/SharingList/SharingDetailedList';
 
@@ -35,17 +34,6 @@ export function genericSort<T>(items: T[], columnKey: string, isSortedDescending
 //   }
 //   return objectsArr;
 // }
-
-export function uniqForObject<T>(array: T[]): T[] {
-  const result: T[] = [];
-  for (const item of array) {
-    const found = result.some((value) => isEqual(value, item));
-    if (!found) {
-      result.push(item);
-    }
-  }
-  return result;
-}
 
 
 export function convertUserToFacePilePersona(identity: SharePointIdentitySet): IFacepilePersona {
@@ -145,16 +133,19 @@ export function processUsers(users: string): IFacepilePersona[] {
 
 export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter: IPaginationFilterState): string => {
   try {
-    const filterVal = queryFilter.filterVal;
-    const tenantId = context.pageContext.aadInfo.tenantId;
 
+    const tenantId = context.pageContext.aadInfo.tenantId;
     const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
+
+    const filterVal = queryFilter.filterVal;
     const searchQuery = queryFilter.searchQuery ? queryFilter.searchQuery + " " : "";
     const siteFilter = filterVal.siteUrl ? `(SPSiteUrl:${filterVal.siteUrl}) ` : "";
+    const testFilter = DEBUG ? "" : "";
 
-    let query = `${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+    let query = `${testFilter}${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
 
     // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
+
     let isTeams = false, isPrivateChannel = false;
     let groupId = "";
     if (context.sdks.microsoftTeams) {

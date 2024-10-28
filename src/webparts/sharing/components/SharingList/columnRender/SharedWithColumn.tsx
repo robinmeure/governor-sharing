@@ -1,12 +1,12 @@
 
 
 import * as React from 'react'
-import { TooltipHost, Icon, IFacepilePersona, PersonaSize, Facepile, OverflowButtonType, Persona, Text } from '@fluentui/react';
-import { SharedType } from '../../../../../common/model';
+import { TooltipHost, Icon, PersonaSize, Persona, Text } from '@fluentui/react';
+import { ISharedUser, SharedType } from '../../../../../common/model';
 
 interface ISharedWithColumnProps {
     sharedType: SharedType;
-    sharedWith: IFacepilePersona[];
+    sharedWith: ISharedUser[];
 }
 
 
@@ -16,7 +16,19 @@ const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, shared
         <>
             <div>
 
-                {sharedWith?.length === 0 && <Persona text={`${sharedWith[0]?.personaName}`} hidePersonaDetails={true} size={PersonaSize.size24} />}
+                {sharedWith.map((sharedMember) => {
+                    return <div key={sharedMember.id}>
+                        <Persona
+                            size={PersonaSize.size24}
+                            imageAlt={sharedMember?.displayName || ''}
+                            imageUrl={`${window.location.origin}/_layouts/15/userphoto.aspx?size=M&username=${sharedMember?.id}`}
+                            text={sharedMember?.displayName || ''}
+                            secondaryText={sharedMember?.id}
+                        />
+                    </div>
+                })}
+
+                {/* {sharedWith?.length === 0 && <Persona text={`${sharedWith[0]?.name}`} hidePersonaDetails={true} size={PersonaSize.size24} />}
 
                 {sharedWith?.length > 1 && (
                     <Facepile
@@ -30,7 +42,7 @@ const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, shared
                         ariaDescription="List of people who has been shared with."
                         ariaLabel="List of people who has been shared with."
                     />
-                )}
+                )} */}
 
             </div>
 
