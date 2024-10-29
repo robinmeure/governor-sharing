@@ -29,6 +29,7 @@ export interface IPaginationFilterState {
     totalPages: number;
     filterVal: IFilterItem;
     selectedDocument: IFileSharingResponse | undefined;
+    isRefreshData: boolean
 }
 
 const SharingDetailedList: React.FC = (): JSX.Element => {
@@ -50,7 +51,8 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             modifiedBy: ""
         },
         selectedDocument: undefined,
-        searchQuery: ""
+        searchQuery: "",
+        isRefreshData: false
     });
 
 
@@ -90,7 +92,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             const lastIndex = pageToProcess * governContext.pageLimit;
             const firstIndex = lastIndex - governContext.pageLimit;
             const paginatedItems = locFileIds.slice(firstIndex, lastIndex);
-            setPaginationFilterState(prevState => ({ ...prevState, totalPages: Math.ceil(locFileIds.length / governContext.pageLimit) }));
+            setPaginationFilterState(prevState => ({ ...prevState, totalPages: Math.ceil(locFileIds.length / governContext.pageLimit), isRefreshData: false }));
 
             // const locSpGroups: string[] = await getSiteGroups(paginationFilterState.filterVal.siteUrl);
             // console.log("FazLog ~ loadPage ~ locSpGroups:", locSpGroups);
@@ -119,7 +121,15 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             console.log("FazLog ~ loadPage ~ driveItemsPermissions:", driveItemsPermissions);
             const sharedResults = driveItemsPermissions.map(driveItem => {
                 const file = locSearchItems.find(item => item.FileId === driveItem.fileId);
-                return file ? DrivePermissionResponseMapper(file, driveItem) : null;
+                if (file) {
+                    const locDrivePermission = DrivePermissionResponseMapper(file, driveItem);
+                    console.log("FazLog ~ sharedResults ~ locDrivePermission:", locDrivePermission);
+                    if (paginationFilterState.filterVal.sharedType.length > 0) {
+                        locDrivePermission.SharedWith = locDrivePermission.SharedWith.filter((val) => paginationFilterState.filterVal.sharedType.includes(val.type))
+                    }
+                    return locDrivePermission;
+                }
+                return null;
             }).filter(Boolean) as IFileSharingResponse[];
 
             setSharedFiles(sharedResults.filter(result => result.SharedWith !== null));
@@ -155,6 +165,25 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         };
         init().catch(error => console.error("Error during initialization:", error));
     }, []);
+
+    useEffect(() => {
+        const refreshData = async (): Promise<void> => {
+            try {
+                if (paginationFilterState.isRefreshData) {
+                    await getFilesAndLoadPages(paginationFilterState);
+                    setPaginationFilterState(prevState => ({
+                        ...prevState,
+                        isRefreshData: false
+                    }));
+                } else {
+                    // do offline filter 
+                }
+            } catch (error) {
+                console.error("FazLog ~ refreshData ~ error:", error);
+            }
+        };
+        refreshData().catch(error => console.error("Error during refreshData:", error));
+    }, [paginationFilterState.isRefreshData])
 
 
     const columns: IColumn[] = useMemo(() => [
@@ -267,20 +296,33 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                             placeholder="Search..."
                             underlined={true}
                             onSearch={async (val: string) => {
-                                const updatedFilter: IPaginationFilterState = {
-                                    ...paginationFilterState,
-                                    searchQuery: val
-                                };
-                                setPaginationFilterState(updatedFilter);
-                                await getFilesAndLoadPages(updatedFilter);
+                                // const updatedFilter: IPaginationFilterState = {
+                                //     ...paginationFilterState,
+                                //     searchQuery: val,
+                                //     isRefreshData: true
+                                // };
+                                setPaginationFilterState(prevState => ({
+                                    ...prevState,
+                                    searchQuery: val,
+                                    isRefreshData: true
+                                }));
+                                // setPaginationFilterState(updatedFilter);
+                                // await getFilesAndLoadPages(updatedFilter);
                             }}
                             onClear={async () => {
-                                const updatedFilter: IPaginationFilterState = {
-                                    ...paginationFilterState,
-                                    searchQuery: ""
-                                };
-                                setPaginationFilterState(updatedFilter);
-                                await getFilesAndLoadPages(updatedFilter);
+                                // const updatedFilter: IPaginationFilterState = {
+                                //     ...paginationFilterState,
+                                //     searchQuery: "",
+                                //     isRefreshData: true
+                                // };
+                                // setPaginationFilterState(updatedFilter);
+
+                                setPaginationFilterState(prevState => ({
+                                    ...prevState,
+                                    searchQuery: "",
+                                    isRefreshData: true
+                                }));
+                                // await getFilesAndLoadPages(updatedFilter);
                             }}
                         />
                     </Stack.Item>
@@ -296,10 +338,11 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                                     const updatedFilter: IPaginationFilterState = {
                                         ...paginationFilterState,
                                         filterVal: newFilter,
-                                        currentPage: 1
+                                        currentPage: 1,
+                                        isRefreshData: true
                                     };
                                     await getFilesAndLoadPages(updatedFilter);
-                                    setPaginationFilterState(prevState => ({ ...prevState, filterVal: newFilter }))
+                                    // setPaginationFilterState(updatedFilter)
                                 }
                             }}
                         />
@@ -311,7 +354,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 <FileDetailPanel
                     isOpen={!!paginationFilterState.selectedDocument}
                     file={paginationFilterState.selectedDocument}
-                    onDismiss={() => setPaginationFilterState(prevState => ({ ...prevState, selectedDocument: undefined }))}
+                    onDismiss={() => setPaginationFilterState(prevState => ({ ...prevState, selectedDocument: undefined, isRefreshData: false }))}
                 />
             )}
 
@@ -337,7 +380,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                     currentPage={paginationFilterState.currentPage || 1}
                     totalPages={paginationFilterState.totalPages}
                     onChange={async (page) => {
-                        setPaginationFilterState(prevState => ({ ...prevState, currentPage: page }));
+                        setPaginationFilterState(prevState => ({ ...prevState, currentPage: page, isRefreshData: false }));
                         await loadPage(page, searchItems)
                     }
                     }

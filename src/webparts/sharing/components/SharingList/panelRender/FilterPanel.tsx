@@ -107,7 +107,7 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
                 <div style={{ padding: "12px 0" }}>
                     <Label>Shared Type</Label>
-                    <div style={{ gap: "8", display: "flex", flexDirection: "column" }}>
+                    <div style={{ gap: "8px", display: "flex", flexDirection: "column" }}>
                         <Checkbox label="Guest/External Users"
                             checked={filtreVal.sharedType.filter(val => val === "Guest").length > 0}
                             onChange={(ex, checked) => {
@@ -124,19 +124,17 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
                                 console.log("FazLog ~ ex:", ex);
                                 setFilterVal({
                                     ...filtreVal,
-                                    sharedType: checked ? [...filtreVal.sharedType, "Everyone"] : filtreVal.sharedType.filter(val => val !== "Guest")
+                                    sharedType: checked ? [...filtreVal.sharedType, "Groups"] : filtreVal.sharedType.filter(val => val !== "Groups")
                                 })
                             }}
                         />
-                        {/* export type SharedType = "Link" | "Inherited" | "Owner" | "Member" | "Guest" | "Everyone"; */}
-
                         <Checkbox label="Member"
                             checked={filtreVal.sharedType.filter(val => val === "Member").length > 0}
                             onChange={(ex, checked) => {
                                 console.log("FazLog ~ ex:", ex);
                                 setFilterVal({
                                     ...filtreVal,
-                                    sharedType: checked ? [...filtreVal.sharedType, "Guest"] : filtreVal.sharedType.filter(val => val !== "Guest")
+                                    sharedType: checked ? [...filtreVal.sharedType, "Member"] : filtreVal.sharedType.filter(val => val !== "Member")
                                 })
                             }}
                         />
