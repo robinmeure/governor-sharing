@@ -195,38 +195,32 @@ export function processUsers(users: string): IFacepilePersona[] {
 
 
 export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter: IPaginationFilterState): string => {
-  try {
+  const tenantId = context.pageContext.aadInfo.tenantId;
+  const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
 
-    const tenantId = context.pageContext.aadInfo.tenantId;
-    const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
+  const filterVal = queryFilter.filterVal;
+  const searchQuery = queryFilter.searchQuery ? queryFilter.searchQuery + " " : "";
+  const siteFilter = filterVal.siteUrl ? `(SPSiteUrl:${filterVal.siteUrl}) ` : "";
+  const testFilter = DEBUG ? "" : "";
 
-    const filterVal = queryFilter.filterVal;
-    const searchQuery = queryFilter.searchQuery ? queryFilter.searchQuery + " " : "";
-    const siteFilter = filterVal.siteUrl ? `(SPSiteUrl:${filterVal.siteUrl}) ` : "";
-    const testFilter = DEBUG ? "" : "";
+  // let query = `${testFilter}${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
 
-    // let query = `${testFilter}${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+  let query = `${testFilter}${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
 
-    let query = `${testFilter}${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
-
-    let isTeams = false, isPrivateChannel = false;
-    let groupId = "";
-    if (context.sdks.microsoftTeams) {
-      isTeams = true;
-    }
-    if (isTeams) {
-      isPrivateChannel = context.sdks.microsoftTeams && (context.sdks.microsoftTeams.context.channelType === "Private") || false;
-      groupId = context.sdks.microsoftTeams?.context?.groupId ?? "";
-      // const siteUrl = context.sdks.microsoftTeams ? context.sdks.microsoftTeams.context.teamSiteUrl : '';
-      if (!isPrivateChannel)
-        query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`;
-    }
-
-    return query;
-  } catch (error) {
-    console.log("FazLog ~ SearchQueryGeneratorForDocs ~ error:", error);
-    throw error;
+  let isTeams = false, isPrivateChannel = false;
+  let groupId = "";
+  if (context.sdks.microsoftTeams) {
+    isTeams = true;
   }
+  if (isTeams) {
+    isPrivateChannel = context.sdks.microsoftTeams && (context.sdks.microsoftTeams.context.channelType === "Private") || false;
+    groupId = context.sdks.microsoftTeams?.context?.groupId ?? "";
+    // const siteUrl = context.sdks.microsoftTeams ? context.sdks.microsoftTeams.context.teamSiteUrl : '';
+    if (!isPrivateChannel)
+      query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`;
+  }
+
+  return query;
 }
 
 

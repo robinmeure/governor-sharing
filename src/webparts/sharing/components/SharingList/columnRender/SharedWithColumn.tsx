@@ -12,6 +12,8 @@ interface ISharedWithColumnProps {
 
 
 const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, sharedType, filteredSharedTypes }): JSX.Element => {
+
+
     let locSharedWith = sharedWith;
     if (filteredSharedTypes.length > 0) {
         locSharedWith = locSharedWith.filter(val => {
@@ -19,11 +21,46 @@ const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, shared
                 return val;
             }
         })
-        console.log("FazLog ~ locSharedWith:", locSharedWith);
     }
     return (
         <>
             <div>
+
+                <div>
+                    {(() => {
+                        let textContent = "", iconName = "";
+                        switch (sharedType) {
+                            case "Guest":
+                                textContent = "Shared with guest/external users";
+                                iconName = "SecurityGroup";
+                                break;
+                            case "Everyone":
+                                textContent = "Shared with everyone";
+                                iconName = "Family";
+                                break;
+                            case "Link":
+                                textContent = "Shared with organization";
+                                iconName = "Family";
+                                break;
+                            case "Inherited":
+                                textContent = "Shared by inheritance";
+                                iconName = "PartyLeader";
+                                break;
+                            default:
+                                return <></>;
+                        }
+                        return (
+                            <div style={{ marginTop: 4 }}>
+                                <TooltipHost content={textContent} id="guestTip">
+                                    <Icon aria-label={iconName} iconName={iconName} id={iconName + "icon"} />
+                                    <Text style={{ marginLeft: 8 }} variant="small">{textContent}</Text>
+                                </TooltipHost>
+                            </div>
+
+                        );
+                    })()}
+
+                </div>
 
                 {locSharedWith.map((sharedMember) => {
                     return <div key={sharedMember.id}>
@@ -55,41 +92,7 @@ const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, shared
 
             </div>
 
-            <div>
-                {(() => {
-                    let textContent = "", iconName = "";
-                    switch (sharedType) {
-                        case "Guest":
-                            textContent = "Shared with guest/external users";
-                            iconName = "SecurityGroup";
-                            break;
-                        case "Everyone":
-                            textContent = "Shared with everyone";
-                            iconName = "Family";
-                            break;
-                        case "Link":
-                            textContent = "Shared with organization";
-                            iconName = "Family";
-                            break;
-                        case "Inherited":
-                            textContent = "Shared by inheritance";
-                            iconName = "PartyLeader";
-                            break;
-                        default:
-                            return <></>;
-                    }
-                    return (
-                        <div style={{ marginTop: 4 }}>
-                            <TooltipHost content={textContent} id="guestTip">
-                                <Icon aria-label={iconName} iconName={iconName} id={iconName + "icon"} />
-                                <Text style={{ marginLeft: 8 }} variant="small">{textContent}</Text>
-                            </TooltipHost>
-                        </div>
 
-                    );
-                })()}
-
-            </div>
         </>
     );
 

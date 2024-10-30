@@ -68,7 +68,6 @@ export const usePnPService = (spfxContext: WebPartContext | ApplicationCustomize
     //         }
     //         return locSearchResults;
     //     } catch (error) {
-    //         console.log("FazLog ~ getDocsByGraphSearch ~ error:", error);
     //         throw error;
     //     }
     // }

@@ -67,143 +67,139 @@ export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], e
 
         return locMappedVal as T[];
     } catch (error) {
-        console.log("FazLog ~ SearchResultMapper ~ error:", error);
+        console.log("GraphSearchResponseMapper ~ error:", error);
         throw error;
     }
 }
 
 export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, driveItem: DrivePermissionResponse): IFileSharingResponse => {
-    try {
-        const sharedWithUser: IFacepilePersona[] = [];
-        const sharedWithUser2: ISharedUser[] = [];
+    const sharedWithUser: IFacepilePersona[] = [];
+    const sharedWithUser2: ISharedUser[] = [];
 
-        let sharingUserType: SharedType = "Member";
+    let sharingUserType: SharedType = "Member";
 
-        // Getting all the details of the file and in which folder is lives
-        let folderUrl = file.Path ? file.Path.replace(`/${file.FileName}`, '') : '';
-        let folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
+    // Getting all the details of the file and in which folder is lives
+    let folderUrl = file.Path ? file.Path.replace(`/${file.FileName}`, '') : '';
+    let folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
 
-        // for certain filetypes we get the dispform.aspx link back instead of the full path, so we need to fix that
-        if (folderName.indexOf("DispForm.aspx") > -1) {
-            folderUrl = folderUrl.substring(0, folderUrl.lastIndexOf("/Forms/DispForm.aspx"));
-            folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
-            if (file.FileName) {
-                file.FileExtension = file.FileName.substring(file.FileName.lastIndexOf(".") + 1);
-            }
+    // for certain filetypes we get the dispform.aspx link back instead of the full path, so we need to fix that
+    if (folderName.indexOf("DispForm.aspx") > -1) {
+        folderUrl = folderUrl.substring(0, folderUrl.lastIndexOf("/Forms/DispForm.aspx"));
+        folderName = folderUrl.lastIndexOf("/") > 0 ? folderUrl.substring(folderUrl.lastIndexOf("/") + 1) : folderUrl;
+        if (file.FileName) {
+            file.FileExtension = file.FileName.substring(file.FileName.lastIndexOf(".") + 1);
         }
+    }
 
-        driveItem.permissions.map(perm => {
-            if (perm.link) {
-                switch (perm.link.scope) {
-                    case "anonymous":
-                        break;
-                    case "organization": {
-                        // Shared through links
-                        const _user: IFacepilePersona = {};
-                        _user.personaName = perm.link.scope + " " + perm.link.type;
-                        _user.data = "Organization";
-                        if (sharedWithUser.indexOf(_user) === -1) {
-                            sharedWithUser.push(_user);
-                        }
-                        break;
-                    }
-                    case "users": {
-                        // find the the user is group or actual user
-                        const _users = perm.grantedToIdentitiesV2 ? convertToFacePilePersona(perm.grantedToIdentitiesV2) : [];
-                        sharedWithUser.push(..._users);
-                        break;
-                    }
-                    default:
-                        break;
-                }
-            }
-            else // checking the normal permissions as well, other than the sharing links
-            {
-                // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
-                if (perm.grantedTo?.user && perm.grantedToV2) {
-                    const _users = convertUserToFacePilePersona(perm.grantedToV2);
-                    sharedWithUser.push(_users);
-                }
-                else // otherwise, we're gonna add these groups and mark it as inherited permissions
-                {
+    driveItem.permissions.map(perm => {
+        if (perm.link) {
+            switch (perm.link.scope) {
+                case "anonymous":
+                    break;
+                case "organization": {
+                    // Shared through links
                     const _user: IFacepilePersona = {};
-                    _user.personaName = perm.grantedTo?.user?.displayName ?? undefined;
-                    _user.data = "Inherited";
+                    _user.personaName = perm.link.scope + " " + perm.link.type;
+                    _user.data = "Organization";
                     if (sharedWithUser.indexOf(_user) === -1) {
                         sharedWithUser.push(_user);
                     }
+                    break;
                 }
-            }
-
-            if (file.SharedWithUsersOWSUSER !== null) {
-                const _users = file.SharedWithUsersOWSUSER ? processUsers(file.SharedWithUsersOWSUSER) : [];
-                sharedWithUser.push(..._users);
-            }
-        });
-        // if there are any duplicates, this will remove them (e.g. multiple organization links)
-        if (sharedWithUser?.length > 0) {
-
-            sharedWithUser.forEach(element => {
-                const name = element.personaName || element.name || "";
-
-                sharedWithUser2.push({
-                    id: element.id || name,
-                    displayName: name,
-                    type: element.data
-                })
-            });
-
-
-
-            let isGuest = false;
-            let isLink = false;
-            let isInherited = false;
-
-            for (const user of sharedWithUser) {
-                switch (user.data) {
-                    case "Guest": isGuest = true; break;
-                    case "Organization": isLink = true; break;
-                    case "Inherited": isInherited = true; break;
+                case "users": {
+                    // find the the user is group or actual user
+                    const _users = perm.grantedToIdentitiesV2 ? convertToFacePilePersona(perm.grantedToIdentitiesV2) : [];
+                    sharedWithUser.push(..._users);
+                    break;
                 }
+                default:
+                    break;
             }
-
-            // if we found a guest user, we need to set the sharingUserType to Guest
-            if (isGuest) {
-                sharingUserType = "Guest";
+        }
+        else // checking the normal permissions as well, other than the sharing links
+        {
+            // if the permission is not the same as the default associated spo groups, we need to add it to the sharedWithUser array
+            if (perm.grantedTo?.user && perm.grantedToV2) {
+                const _users = convertUserToFacePilePersona(perm.grantedToV2);
+                sharedWithUser.push(_users);
             }
-            else if (isLink) {
-                sharingUserType = "Link";
-            }
-            else if (isInherited) {
-                sharingUserType = "Inherited";
+            else // otherwise, we're gonna add these groups and mark it as inherited permissions
+            {
+                const _user: IFacepilePersona = {};
+                _user.personaName = perm.grantedTo?.user?.displayName ?? undefined;
+                _user.data = "Inherited";
+                if (sharedWithUser.indexOf(_user) === -1) {
+                    sharedWithUser.push(_user);
+                }
             }
         }
 
-        // sharedWithUser2 = uniqForObject(sharedWithUser2);
-        const uniqueUsers = Array.from(
-            new Map(sharedWithUser2.map(user => [user.displayName, user])).values()
-        );
+        if (file.SharedWithUsersOWSUSER !== null) {
+            const _users = file.SharedWithUsersOWSUSER ? processUsers(file.SharedWithUsersOWSUSER) : [];
+            sharedWithUser.push(..._users);
+        }
+    });
+    // if there are any duplicates, this will remove them (e.g. multiple organization links)
+    if (sharedWithUser?.length > 0) {
 
-        // building up the result to be returned
-        const sharedResult: IFileSharingResponse =
-        {
-            FileExtension: file?.FileExtension ? file.FileExtension : "folder",
-            FileName: file.FileName ?? '',
-            Channel: folderName,
-            LastModified: file.LastModifiedTime ?? new Date(),
-            SharedWith: uniqueUsers,
-            ListId: file.ListId ?? '',
-            ListItemId: file.ListItemId ?? 0,
-            Url: file.Path ?? '',
-            FolderUrl: folderUrl,
-            SharedType: sharingUserType,
-            FileId: file.FileId ?? '',
-            SiteUrl: file.SiteUrl ?? '',
-            LastModifiedBy: file.LastModifiedBy
-        };
-        return sharedResult;
-    } catch (error) {
-        console.log("FazLog ~ SearchResultToSharingMapper ~ error:", error);
-        throw error;
+        sharedWithUser.forEach(element => {
+            const name = element.personaName || element.name || "";
+
+            sharedWithUser2.push({
+                id: element.id || name,
+                displayName: name,
+                type: element.data
+            })
+        });
+
+
+
+        let isGuest = false;
+        let isLink = false;
+        let isInherited = false;
+
+        for (const user of sharedWithUser) {
+            switch (user.data) {
+                case "Guest": isGuest = true; break;
+                case "Organization": isLink = true; break;
+                case "Inherited": isInherited = true; break;
+            }
+        }
+
+        // if we found a guest user, we need to set the sharingUserType to Guest
+        if (isGuest) {
+            sharingUserType = "Guest";
+        }
+        else if (isLink) {
+            sharingUserType = "Link";
+        }
+        else if (isInherited) {
+            sharingUserType = "Inherited";
+        }
     }
+
+    // sharedWithUser2 = uniqForObject(sharedWithUser2);
+    const uniqueUsers = Array.from(
+        new Map(sharedWithUser2.map(user => [user.displayName, user])).values()
+    );
+
+    // building up the result to be returned
+    const sharedResult: IFileSharingResponse =
+    {
+        FileExtension: file?.FileExtension ? file.FileExtension : "folder",
+        FileName: file.FileName ?? '',
+        Channel: folderName,
+        LastModified: file.LastModifiedTime ?? new Date(),
+        SharedWith: uniqueUsers,
+        ListId: file.ListId ?? '',
+        ListItemId: file.ListItemId ?? 0,
+        Url: file.Path ?? '',
+        FolderUrl: folderUrl,
+        SharedType: sharingUserType,
+        FileId: file.FileId ?? '',
+        SiteUrl: file.SiteUrl ?? '',
+        LastModifiedBy: file.LastModifiedBy
+    };
+    return sharedResult;
+
 }

@@ -31,19 +31,14 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
     };
 
     const getByGraphSearch = async (searchReq: SearchRequest): Promise<SearchResponse[]> => {
-        try {
-            await initializeGraphClient();
-            const response = await graphClient.api('/search/query')
-                .post({
-                    requests: [
-                        searchReq
-                    ]
-                });
-            return response?.value;
-        } catch (error) {
-            console.log("FazLog ~ getDocsByGraphSearch ~ error:", error);
-            throw error;
-        }
+        await initializeGraphClient();
+        const response = await graphClient.api('/search/query')
+            .post({
+                requests: [
+                    searchReq
+                ]
+            });
+        return response?.value;
     }
 
     const getDriveItemsPermission = async (listItems: Record<string, IDriveItems>): Promise<DrivePermissionResponse[]> => {
@@ -81,7 +76,7 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
             await Promise.all(driveItemsPromises);
             return driveItemPermissions;
         } catch (error) {
-            console.log("FazLog ~ getDriveItemsBySearchResult ~ error:", error);
+            console.error("getDriveItemsPermission ~ error", error);
             throw error;
         }
     }
