@@ -92,7 +92,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             const lastIndex = pageToProcess * governContext.pageLimit;
             const firstIndex = lastIndex - governContext.pageLimit;
             const paginatedItems = locFileIds.slice(firstIndex, lastIndex);
-            setPaginationFilterState(prevState => ({ ...prevState, totalPages: Math.ceil(locFileIds.length / governContext.pageLimit), isRefreshData: false }));
+            setPaginationFilterState(prevState => ({ ...prevState, totalPages: Math.ceil(locFileIds.length / governContext.pageLimit) }));
 
             // const locSpGroups: string[] = await getSiteGroups(paginationFilterState.filterVal.siteUrl);
             // console.log("FazLog ~ loadPage ~ locSpGroups:", locSpGroups);
@@ -166,8 +166,21 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         init().catch(error => console.error("Error during initialization:", error));
     }, []);
 
+    // const localDataFilter = (updatedFilter: IPaginationFilterState, filterType: ("SharedType" | "User")[]): void => {
+    //     try {
+    //         const isSharedTypeFilter = filterType.filter(val => val === "SharedType").length > 0;
+    //         if (isSharedTypeFilter) {
+    //             // const locSharedFiles = sharedFiles.filter(val => updatedFilter.filterVal.sharedType.indexOf(val.SharedType) > -1);
+    //             const locSharedFiles = sharedFiles.filter(val => val.SharedWith.filter(val2 => updatedFilter.filterVal.sharedType.indexOf(val2.type) > -1).length > 0);
+    //             setSharedFiles(locSharedFiles);
+    //         }
+    //     } catch (error) {
+    //         console.log("FazLog ~ localDataFilter ~ error:", error);
+    //     }
+    // }
+
     useEffect(() => {
-        const refreshData = async (): Promise<void> => {
+        const serverRefreshData = async (): Promise<void> => {
             try {
                 if (paginationFilterState.isRefreshData) {
                     await getFilesAndLoadPages(paginationFilterState);
@@ -175,14 +188,12 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                         ...prevState,
                         isRefreshData: false
                     }));
-                } else {
-                    // do offline filter 
                 }
             } catch (error) {
                 console.error("FazLog ~ refreshData ~ error:", error);
             }
         };
-        refreshData().catch(error => console.error("Error during refreshData:", error));
+        serverRefreshData().catch(error => console.error("Error during refreshData:", error));
     }, [paginationFilterState.isRefreshData])
 
 
@@ -228,7 +239,10 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             minWidth: 150,
             maxWidth: 185,
             isResizable: true,
-            onRender: (item: IFileSharingResponse) => <SharedWithColumn sharedWith={item.SharedWith} sharedType={item.SharedType} />
+            onRender: (item: IFileSharingResponse) => <SharedWithColumn
+                sharedWith={item.SharedWith}
+                sharedType={item.SharedType}
+                filteredSharedTypes={paginationFilterState.filterVal.sharedType} />
         },
 
         {
@@ -275,7 +289,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 <ActionButton iconProps={{ iconName: 'View' }} onClick={() => setPaginationFilterState(prevState => ({ ...prevState, selectedDocument: item }))} />
             )
         }
-    ], []);
+    ], [paginationFilterState.filterVal.sharedType]);
 
     if (!loadingErrorState.loading && loadingErrorState.error) {
         return (
@@ -296,33 +310,18 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                             placeholder="Search..."
                             underlined={true}
                             onSearch={async (val: string) => {
-                                // const updatedFilter: IPaginationFilterState = {
-                                //     ...paginationFilterState,
-                                //     searchQuery: val,
-                                //     isRefreshData: true
-                                // };
                                 setPaginationFilterState(prevState => ({
                                     ...prevState,
                                     searchQuery: val,
                                     isRefreshData: true
                                 }));
-                                // setPaginationFilterState(updatedFilter);
-                                // await getFilesAndLoadPages(updatedFilter);
                             }}
                             onClear={async () => {
-                                // const updatedFilter: IPaginationFilterState = {
-                                //     ...paginationFilterState,
-                                //     searchQuery: "",
-                                //     isRefreshData: true
-                                // };
-                                // setPaginationFilterState(updatedFilter);
-
                                 setPaginationFilterState(prevState => ({
                                     ...prevState,
                                     searchQuery: "",
                                     isRefreshData: true
                                 }));
-                                // await getFilesAndLoadPages(updatedFilter);
                             }}
                         />
                     </Stack.Item>
@@ -334,15 +333,18 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                             onDismissFilterPanel={async (newFilter) => {
                                 dismissFilterPanel();
                                 if (newFilter) {
-                                    console.log("FazLog ~ onDismissFilterPanel={ ~ newFilter:", newFilter);
+                                    //check for server refresh
+                                    const isServerRefresh = newFilter.siteUrl !== paginationFilterState.filterVal.siteUrl;
                                     const updatedFilter: IPaginationFilterState = {
                                         ...paginationFilterState,
                                         filterVal: newFilter,
                                         currentPage: 1,
-                                        isRefreshData: true
+                                        isRefreshData: isServerRefresh
                                     };
-                                    await getFilesAndLoadPages(updatedFilter);
-                                    // setPaginationFilterState(updatedFilter)
+                                    // if (!isServerRefresh) {
+                                    //     localDataFilter(updatedFilter, ["SharedType"]);
+                                    // }
+                                    setPaginationFilterState(updatedFilter);
                                 }
                             }}
                         />

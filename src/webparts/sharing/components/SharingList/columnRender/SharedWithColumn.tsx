@@ -7,16 +7,25 @@ import { ISharedUser, SharedType } from '../../../../../common/model';
 interface ISharedWithColumnProps {
     sharedType: SharedType;
     sharedWith: ISharedUser[];
+    filteredSharedTypes: SharedType[];
 }
 
 
-const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, sharedType }): JSX.Element => {
-
+const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, sharedType, filteredSharedTypes }): JSX.Element => {
+    let locSharedWith = sharedWith;
+    if (filteredSharedTypes.length > 0) {
+        locSharedWith = locSharedWith.filter(val => {
+            if (filteredSharedTypes.indexOf(val.type) > -1) {
+                return val;
+            }
+        })
+        console.log("FazLog ~ locSharedWith:", locSharedWith);
+    }
     return (
         <>
             <div>
 
-                {sharedWith.map((sharedMember) => {
+                {locSharedWith.map((sharedMember) => {
                     return <div key={sharedMember.id}>
                         <Persona
                             size={PersonaSize.size24}

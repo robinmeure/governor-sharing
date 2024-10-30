@@ -36,6 +36,70 @@ export function genericSort<T>(items: T[], columnKey: string, isSortedDescending
 // }
 
 
+// export function convertUserToFacePilePersona(identity: SharePointIdentitySet): IFacepilePersona {
+//   if (identity.siteUser) {
+//     const siteUser = identity.siteUser;
+//     const _user: IFacepilePersona =
+//     {
+//       data: (siteUser.loginName && siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
+//       personaName: siteUser.displayName ?? undefined,
+//       name: siteUser.loginName ? siteUser.loginName.replace("i:0#.f|membership|", "") : undefined
+//     };
+//     return _user;
+//   }
+//   else if (identity.siteGroup) {
+//     const siteGroup = identity.siteGroup;
+//     const _user: IFacepilePersona =
+//     {
+//       data: "Group",
+//       personaName: siteGroup.displayName ?? undefined,
+//       name: siteGroup.loginName ? siteGroup.loginName.replace("c:0t.c|tenant|", "") : undefined
+//     };
+//     return _user;
+//   }
+//   else {
+//     const _user: IFacepilePersona =
+//     {
+//       name: identity.user?.id ?? undefined,
+//       data: (identity.user?.id === null) ? "Guest" : "Member",
+//       personaName: identity.user?.displayName ?? undefined
+//     };
+//     return _user;
+//   }
+// }
+
+// export function convertToFacePilePersona(identities: SharePointIdentitySet[]): IFacepilePersona[] {
+//   const _users: IFacepilePersona[] = [];
+//   if (identities.length > 1) {
+//     identities.forEach((user) => {
+//       if (user.siteUser) {
+//         const siteUser = user.siteUser;
+//         const _user: IFacepilePersona =
+//         {
+//           data: (siteUser.loginName && siteUser.loginName.indexOf('#ext') !== -1) ? "Guest" : "Member",
+//           personaName: siteUser.displayName ?? undefined,
+//           name: siteUser.loginName ? siteUser.loginName.replace("i:0#.f|membership|", "") : undefined
+//         };
+//         _users.push(_user);
+//       }
+//       else {
+//         const _user: IFacepilePersona =
+//         {
+//           name: user.user?.id ?? undefined,
+//           data: (user.user?.id === null) ? "Guest" : "Member",
+//           personaName: user.user?.displayName ?? undefined
+//         };
+//         _users.push(_user);
+//       }
+//     });
+//   }
+//   else if (identities.length === 1) {
+//     _users.push(convertUserToFacePilePersona(identities[0]));
+//   }
+
+//   return _users;
+// }
+
 export function convertUserToFacePilePersona(identity: SharePointIdentitySet): IFacepilePersona {
   if (identity.siteUser) {
     const siteUser = identity.siteUser;
@@ -100,7 +164,6 @@ export function convertToFacePilePersona(identities: SharePointIdentitySet[]): I
   return _users;
 }
 
-
 /// this is used to process the SharedWithUsersOWSUSER output to get the userPrincipalName and userType
 export function processUsers(users: string): IFacepilePersona[] {
   const _users: microsoftgraph.User[] = [];
@@ -142,9 +205,9 @@ export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter
     const siteFilter = filterVal.siteUrl ? `(SPSiteUrl:${filterVal.siteUrl}) ` : "";
     const testFilter = DEBUG ? "" : "";
 
-    let query = `${testFilter}${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+    // let query = `${testFilter}${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
 
-    // let query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
+    let query = `${testFilter}${searchQuery}${siteFilter}(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx)`;
 
     let isTeams = false, isPrivateChannel = false;
     let groupId = "";

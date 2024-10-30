@@ -14,7 +14,6 @@ export interface IFilterItem {
     siteUrl: string;
     modifiedBy: string;
     sharedType: SharedType[];
-
 }
 
 interface IFilterPanelProps {
@@ -119,12 +118,12 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
                             }}
                         />
                         <Checkbox label="Groups"
-                            checked={filtreVal.sharedType.filter(val => val === "Groups").length > 0}
+                            checked={filtreVal.sharedType.filter(val => val === "Group").length > 0}
                             onChange={(ex, checked) => {
                                 console.log("FazLog ~ ex:", ex);
                                 setFilterVal({
                                     ...filtreVal,
-                                    sharedType: checked ? [...filtreVal.sharedType, "Groups"] : filtreVal.sharedType.filter(val => val !== "Groups")
+                                    sharedType: checked ? [...filtreVal.sharedType, "Group"] : filtreVal.sharedType.filter(val => val !== "Group")
                                 })
                             }}
                         />

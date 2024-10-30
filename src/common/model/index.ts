@@ -12,7 +12,7 @@ export interface ISharedUser {
     type: SharedType
 }
 
-export type SharedType = "Link" | "Inherited" | "Member" | "Guest" | "Everyone" | "Groups";
+export type SharedType = "Link" | "Inherited" | "Member" | "Guest" | "Everyone" | "Group";
 //#region Graph API Response Interfaces "Owner" |
 
 
