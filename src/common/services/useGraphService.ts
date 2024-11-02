@@ -4,6 +4,7 @@ import { BatchRequestContent, BatchRequestStep, BatchResponseContent } from "@mi
 import { Permission, SearchRequest, SearchResponse } from "@microsoft/microsoft-graph-types";
 import { MSGraphClientV3 } from '@microsoft/sp-http';
 import { IDriveItems } from "../model";
+import { ItemActivityOLD } from "@microsoft/microsoft-graph-types-beta";
 
 
 export interface DrivePermissionResponse {
@@ -14,7 +15,7 @@ export interface DrivePermissionResponse {
 interface IGraphService {
     getDriveItemsPermission(driveItems: Record<string, IDriveItems>): Promise<DrivePermissionResponse[]>;
     getByGraphSearch(searchReq: SearchRequest): Promise<SearchResponse[]>;
-
+    getItemsActivity(file: { driveId: string, itemId: string }): Promise<ItemActivityOLD[] | undefined>;
 }
 
 export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomizerContext): IGraphService => {
@@ -81,9 +82,28 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
         }
     }
 
+    const getItemsActivity = async (file: { driveId: string, itemId: string }): Promise<ItemActivityOLD[] | undefined> => {
+        try {
+            await initializeGraphClient();
+
+            const activities = await graphClient.api(`/drives/${file.driveId}/items/${file.itemId}/activities`)
+                .version('beta')
+                .get();
+            console.log("FazLog ~ getItemsActivity ~ activities:", activities);
+            if (activities) {
+                return activities.value as ItemActivityOLD[];
+            }
+            return undefined;
+        } catch (error) {
+            console.error("getDriveItemsPermission ~ error", error);
+            throw error;
+        }
+    }
+
     return {
         getDriveItemsPermission,
         getByGraphSearch,
+        getItemsActivity
     };
 
 }

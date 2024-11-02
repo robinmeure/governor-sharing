@@ -74,6 +74,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
             const searchResponse = await getByGraphSearch(searchReqForDocs);
             const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
+            console.log("FazLog ~ getFiles ~ locSearchItems:", locSearchItems);
             return locSearchItems;
         } catch (error) {
             setLoadingErrorState(prevState => ({ ...prevState, error: "Error fetching files", loading: false }));
@@ -152,18 +153,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         };
         init().catch(error => console.error("Error during initialization:", error));
     }, []);
-
-    // const localDataFilter = (updatedFilter: IPaginationFilterState, filterType: ("SharedType" | "User")[]): void => {
-    //     try {
-    //         const isSharedTypeFilter = filterType.filter(val => val === "SharedType").length > 0;
-    //         if (isSharedTypeFilter) {
-    //             // const locSharedFiles = sharedFiles.filter(val => updatedFilter.filterVal.sharedType.indexOf(val.SharedType) > -1);
-    //             const locSharedFiles = sharedFiles.filter(val => val.SharedWith.filter(val2 => updatedFilter.filterVal.sharedType.indexOf(val2.type) > -1).length > 0);
-    //             setSharedFiles(locSharedFiles);
-    //         }
-    //     } catch (error) {
-    //     }
-    // }
 
     useEffect(() => {
         const serverRefreshData = async (): Promise<void> => {

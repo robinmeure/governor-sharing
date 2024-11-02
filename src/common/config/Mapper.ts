@@ -186,6 +186,7 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
     // building up the result to be returned
     const sharedResult: IFileSharingResponse =
     {
+        DriveId: file.DriveId,
         FileExtension: file?.FileExtension ? file.FileExtension : "folder",
         FileName: file.FileName ?? '',
         Channel: folderName,

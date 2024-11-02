@@ -1,4 +1,4 @@
-import { Identity } from "@microsoft/microsoft-graph-types";
+import { DeleteAction, Identity } from "@microsoft/microsoft-graph-types";
 
 export interface IDriveItems {
     driveId: string;
@@ -17,6 +17,7 @@ export type SharedType = "Link" | "Inherited" | "Member" | "Guest" | "Everyone" 
 
 
 export interface IFileSharingResponse {
+    DriveId: string;
     FileExtension: string;
     FileName: string;
     LastModified: Date;
@@ -56,6 +57,42 @@ export interface IListItemSearchResponse {
 export interface ISiteSearchResponse {
     name: string;
     url: string;
+}
+
+export interface IItemActivityAction {
+    comment: {
+        isReply?: false,
+        parentAuthor?: Identity,
+        participants?: Identity[]
+    };
+    create: {};
+    delete: DeleteAction;
+    edit: {};
+    mention: {
+        mentionees: Identity[];
+    };
+    move: {
+        from?: string;
+        to?: string;
+    };
+    rename: {
+        oldName?: string;
+        newName?: string;
+    };
+    restore: {};
+    share: {
+        recipients: Identity[]
+    };
+    version: {
+        newVersion: string;
+    };
+}
+
+export interface IItemActivity {
+    id: string;
+    action: string;
+    actor: Identity | undefined;
+    time: Date;
 }
 
 //#endregion
