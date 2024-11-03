@@ -50,7 +50,7 @@ const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, shared
                                 return <></>;
                         }
                         return (
-                            <div style={{ marginTop: 4 }}>
+                            <div style={{ marginBottom: 4 }}>
                                 <TooltipHost content={textContent} id="guestTip">
                                     <Icon aria-label={iconName} iconName={iconName} id={iconName + "icon"} />
                                     <Text style={{ marginLeft: 8 }} variant="small">{textContent}</Text>

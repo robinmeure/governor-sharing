@@ -48,7 +48,8 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         filterVal: {
             siteUrl: webpartContext.pageContext.site.absoluteUrl,
             sharedType: ["Link", "Inherited", "Member", "Guest", "Everyone", "Group"],
-            modifiedBy: ""
+            modifiedBy: "",
+            fileFolder: "BothFilesFolders"
         },
         selectedDocument: undefined,
         searchQuery: "",
@@ -61,11 +62,11 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
     const [isFilterPanelOpen, { setTrue: openFilterPanel, setFalse: dismissFilterPanel }] = useBoolean(false);
 
-    const getFiles = async (query: IPaginationFilterState): Promise<IListItemSearchResponse[]> => {
+    const getFiles = async (queryFilter: IPaginationFilterState): Promise<IListItemSearchResponse[]> => {
         try {
-            const searchReqForDocs: SearchRequest | {} = {
+            const searchReqForDocs: SearchRequest & { trimDuplicates: boolean } = {
                 entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
-                query: { queryString: searchQueryGeneratorForDocs(webpartContext, query) },
+                query: { queryString: searchQueryGeneratorForDocs(webpartContext, queryFilter) },
                 fields: _CONST.GraphSearch.DocsSearch.Fields,
                 from: 0,
                 size: 500,
@@ -132,10 +133,10 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         }
     };
 
-    const getFilesAndLoadPages = async (query: IPaginationFilterState): Promise<void> => {
+    const getFilesAndLoadPages = async (preFilterPageVal: IPaginationFilterState): Promise<void> => {
         try {
             setLoadingErrorState(prevState => ({ ...prevState, loading: true }));
-            const locSearchVals = await getFiles(query);
+            const locSearchVals = await getFiles(preFilterPageVal);
             setSearchItems(locSearchVals);
             await loadPage(1, locSearchVals);
             setLoadingErrorState(prevState => ({ ...prevState, loading: false }));
@@ -271,17 +272,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             </div>
         );
     }
-    // const handleSearchTermDebounce = (inputValue: string): void => {
-    //     setPaginationFilterState(prevState => ({
-    //         ...prevState,
-    //         searchQuery: inputValue,
-    //         isRefreshData: true
-    //     }));
-    // }
-    // const debounceSearchTerm = useCallback(_.debounce(handleSearchTermDebounce, 2000), []);
-    // const handleChange = (newValue: string): void => {
-    //     debounceSearchTerm(newValue);
-    // };
 
     return (
         <div>
@@ -294,17 +284,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                             <SearchBox
                                 placeholder="Search..."
                                 underlined={true}
-                                // onChange={async (_e, val) => {
-                                //     if (val) {
-                                //         handleChange(val);
-                                //     } else {
-                                //         setPaginationFilterState(prevState => ({
-                                //             ...prevState,
-                                //             searchQuery: "",
-                                //             isRefreshData: true
-                                //         }));
-                                //     }
-                                // }}
                                 onSearch={async (val: string) => {
                                     setPaginationFilterState(prevState => ({
                                         ...prevState,
@@ -335,7 +314,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                                     dismissFilterPanel();
                                     if (newFilter) {
                                         //check for server refresh
-                                        const isServerRefresh = newFilter.siteUrl !== paginationFilterState.filterVal.siteUrl;
+                                        const isServerRefresh = (newFilter.siteUrl !== paginationFilterState.filterVal.siteUrl) || (newFilter.fileFolder !== paginationFilterState.filterVal.fileFolder);
                                         const updatedFilter: IPaginationFilterState = {
                                             ...paginationFilterState,
                                             filterVal: newFilter,

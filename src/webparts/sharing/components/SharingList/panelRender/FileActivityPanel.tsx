@@ -35,12 +35,7 @@ const FileActivityPanel: React.FC<IFileActivityPanelProps> = ({ file }): JSX.Ele
     return <div>
         <div>
             {itemActivities && <div>
-                {itemActivities.map(itemAct => {
-                    return <div key={itemAct.id}>
-                        <ItemActivities item={itemAct} />
-                    </div>
-                })}
-                Activities
+                <ItemActivities items={itemActivities} />
                 {/* {itemActivity.map(val => {
                     return <div key={val.id}>
                         {val.id}

@@ -1,14 +1,20 @@
 
 import * as React from 'react'
-import { Checkbox, DefaultButton, Label, Panel, PrimaryButton, TextField } from '@fluentui/react';
-import { useState } from 'react';
-import { SharedType } from '../../../../../common/model';
+import { Checkbox, ChoiceGroup, DefaultButton, Dropdown, IChoiceGroupOption, IDropdownOption, Label, Panel, PrimaryButton, TextField } from '@fluentui/react';
+import { useEffect, useState } from 'react';
+import { ISiteSearchResponse, SharedType } from '../../../../../common/model';
+import { SearchRequest } from '@microsoft/microsoft-graph-types';
+import { GraphSearchResponseMapper } from '../../../../../common/config/Mapper';
+import { useGraphService } from '../../../../../common/services/useGraphService';
+import { _CONST } from '../../../../../common/utils/Const';
+import { SharingWebPartContext } from '../../../hooks/SharingWebPartContext';
 
-
+type FileFolderFilter = "OnlyFiles" | "OnlyFolders" | "BothFilesFolders";
 export interface IFilterItem {
     siteUrl: string;
     modifiedBy: string;
     sharedType: SharedType[];
+    fileFolder: FileFolderFilter;
 }
 
 interface IFilterPanelProps {
@@ -20,39 +26,40 @@ interface IFilterPanelProps {
 
 const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
-    // const { webpartContext } = useContext(SharingWebPartContext);
-    // const { getByGraphSearch } = useGraphService(webpartContext);
+    const { webpartContext } = React.useContext(SharingWebPartContext);
+    const { getByGraphSearch } = useGraphService(webpartContext);
     const [filtreVal, setFilterVal] = useState<IFilterItem>(props.filterItem);
 
-    // const [siteFilterOptions, setSiteFilterOptions] = useState<IDropdownOption[]>([]);
+    const [siteFilterOptions, setSiteFilterOptions] = useState<IDropdownOption[]>([]);
 
-    // useEffect(() => {
-    //     const getFilerValues = async (): Promise<void> => {
-    //         try {
-    //             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    //             const searchReqForSites: SearchRequest | {} = {
-    //                 entityTypes: _CONST.GraphSearch.SiteSearch.EntityType,
-    //                 query: {
-    //                     queryString: "*"
-    //                 },
-    //                 trimDuplicates: true // https://github.com/microsoftgraph/msgraph-sdk-java/issues/1315
-    //             };
-    //             const siteSearchRes = await getByGraphSearch(searchReqForSites);
-    //             const locSearchItems = GraphSearchResponseMapper<ISiteSearchResponse>(siteSearchRes, _CONST.GraphSearch.SiteSearch.EntityType);
-    //             const siteOptions = locSearchItems.map(item => {
-    //                 const parsedUrl = new URL(item.url);
-    //                 return {
-    //                     key: item.url,
-    //                     text: item.name + `(${parsedUrl.pathname})`
-    //                 }
-    //             });
-    //             setSiteFilterOptions(siteOptions);
+    useEffect(() => {
+        const getFilerValues = async (): Promise<void> => {
+            const searchReqForSites: SearchRequest & { trimDuplicates: boolean } = {
+                entityTypes: _CONST.GraphSearch.SiteSearch.EntityType,
+                query: {
+                    queryString: "*"
+                },
+                trimDuplicates: true // https://github.com/microsoftgraph/msgraph-sdk-java/issues/1315
+            };
+            const siteSearchRes = await getByGraphSearch(searchReqForSites);
+            const locSearchItems = GraphSearchResponseMapper<ISiteSearchResponse>(siteSearchRes, _CONST.GraphSearch.SiteSearch.EntityType);
+            const siteOptions = locSearchItems.map(item => {
+                const parsedUrl = new URL(item.url);
+                return {
+                    key: item.url,
+                    text: item.name + `(${parsedUrl.pathname})`
+                }
+            });
+            setSiteFilterOptions(siteOptions);
+        }
+        getFilerValues().catch(error => console.log("init ~ error", error));
+    }, []);
 
-    //         } catch (error) {
-    //         }
-    //     }
-    //     getFilerValues().catch(error => console.log("init ~ error", error));
-    // }, []);
+    const fileFolderOptions: IChoiceGroupOption[] = [
+        { key: "BothFilesFolders" as FileFolderFilter, text: 'Both files & folders' },
+        { key: 'OnlyFiles', text: 'Only files' },
+        { key: 'Only Folders', text: 'Only folders' }
+    ];
 
     return <div>
         <Panel
@@ -77,17 +84,18 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
                 <div style={{ padding: "12px 0" }}>
                     <Label>Site Url</Label>
                     <div>
-                        <TextField
+                        {/* <TextField
                             multiline
                             resizable={false}
                             value={filtreVal.siteUrl}
                             onChange={(e, newVal = '') => setFilterVal({ ...filtreVal, siteUrl: newVal })}
                             placeholder={`https://contoso.sharepoint.com/sites/...`}
-                            description="Url of the site" />
-                        {/* {siteFilterOptions?.length < 50 ? <>
+                            description="Url of the site" /> */}
+                        {siteFilterOptions?.length < 50 ? <>
                             <Dropdown
                                 selectedKey={filtreVal.siteUrl}
-                                options={siteFilterOptions} onChange={(e, op) => {
+                                options={siteFilterOptions}
+                                onChange={(_e, op) => {
                                     setFilterVal({ ...filtreVal, siteUrl: op?.key as string })
                                 }} />
                         </> : <>
@@ -98,7 +106,7 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
                                 onChange={(e, newVal = '') => setFilterVal({ ...filtreVal, siteUrl: newVal })}
                                 placeholder={`https://contoso.sharepoint.com/sites/...`}
                                 description="Url of the site" />
-                        </>} */}
+                        </>}
                     </div>
                 </div>
 
@@ -136,6 +144,13 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
                 </div>
 
+                <div style={{ padding: "12px 0" }}>
+                    <ChoiceGroup options={fileFolderOptions}
+                        onChange={(_e, op) => {
+                            setFilterVal({ ...filtreVal, fileFolder: op?.key as FileFolderFilter })
+                        }} label="Item type"
+                        required={true} />
+                </div>
             </div>
         </Panel>
 
