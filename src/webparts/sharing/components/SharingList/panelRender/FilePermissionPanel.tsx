@@ -5,14 +5,14 @@ import { IFileSharingResponse } from '../../../../../common/model';
 import { DefaultButton, Panel, PanelType, Pivot, PivotItem } from '@fluentui/react';
 import FileActivityPanel from './FileActivityPanel';
 
-interface IFileDetailPanelProps {
+interface IFilePermissionPanelProps {
     file: IFileSharingResponse;
     isOpen: boolean;
     onDismiss(): void;
 }
 
 
-const FileDetailPanel: React.FC<IFileDetailPanelProps> = ({ file, isOpen, onDismiss }): JSX.Element => {
+const FilePermissionPanel: React.FC<IFilePermissionPanelProps> = ({ file, isOpen, onDismiss }): JSX.Element => {
 
     return <div>
         <Panel
@@ -49,4 +49,4 @@ const FileDetailPanel: React.FC<IFileDetailPanelProps> = ({ file, isOpen, onDism
     </div>
 }
 
-export default FileDetailPanel;
+export default FilePermissionPanel;

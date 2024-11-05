@@ -209,9 +209,9 @@ export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter
     fileFolderFilter = "(IsDocument:FALSE OR IsContainer:TRUE) ";
   }
 
-  // let query = `${testFilter}${searchQuery}${siteFilter}${fileFolderFilter} AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+  let query = `${testFilter}${searchQuery}${siteFilter}${fileFolderFilter} AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
 
-  let query = `${testFilter}${searchQuery}${siteFilter}${fileFolderFilter} AND (NOT FileExtension:aspx)`;
+  // let query = `${testFilter}${searchQuery}${siteFilter}${fileFolderFilter} AND (NOT FileExtension:aspx)`;
 
   let isTeams = false, isPrivateChannel = false;
   let groupId = "";

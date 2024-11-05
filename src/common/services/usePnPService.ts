@@ -1,11 +1,14 @@
 
 import { ApplicationCustomizerContext } from "@microsoft/sp-application-base";
-import { ISPFXContext, spfi, SPFx } from '@pnp/sp';
+import { SPFI, spfi } from '@pnp/sp';
 import "@pnp/sp/webs";
 import "@pnp/sp/site-users/web";
 import "@pnp/sp/site-groups/web";
 import { Logger, LogLevel } from '@pnp/logging';
 import { WebPartContext } from '@microsoft/sp-webpart-base';
+import { GraphFI, graphfi } from "@pnp/graph";
+import { Caching } from "@pnp/queryable";
+import { getGraph, getSP } from "../config/PnPjsConfig";
 
 interface IPnPService {
     getSiteGroups(targetSite: string): Promise<string[]>;
@@ -16,19 +19,24 @@ interface IPnPService {
 
 export const usePnPService = (spfxContext: WebPartContext | ApplicationCustomizerContext, siteUrl?: string): IPnPService => {
 
-    // const sp: SPFI = getSP(spfxContext, siteUrl);
-    // const graph: GraphFI = getGraph(spfxContext, siteUrl);
+    const sp: SPFI = getSP(spfxContext, siteUrl);
+    const graph: GraphFI = getGraph(spfxContext, siteUrl);
 
-    // const getCacheFI = <T extends "SP" | "Graph">(type: T): T extends "SP" ? SPFI : GraphFI => {
-    //     const cache = type === "SP" ? spfi(sp) : graphfi(graph);
-    //     return cache.using(Caching({ store: "session" })) as T extends "SP" ? SPFI : GraphFI;
-    // }
+    const getCacheFI = <T extends "SP" | "Graph">(type: T): T extends "SP" ? SPFI : GraphFI => {
+        const cache = type === "SP" ? spfi(sp) : graphfi(graph);
+        return cache.using(Caching({ store: "session" })) as T extends "SP" ? SPFI : GraphFI;
+    }
 
 
-    const getSiteGroups = async (targetSite: string): Promise<string[]> => {
+    //NOTE: This function is not used in the current implementation
+    /** 
+     * Gets the associated groups of a site
+     * @returns {Promise<string[]>} - An array of associated groups
+    */
+    const getSiteGroups = async (): Promise<string[]> => {
 
         try {
-            const localSP = spfi(targetSite).using(SPFx(spfxContext as ISPFXContext));
+            const localSP = getCacheFI("SP"); //spfi(targetSite).using(SPFx(spfxContext as ISPFXContext));
             const { Title } = await localSP.web.select("Title")();
             console.log(`Web title: ${Title}`);
             const locStandardGroups: string[] = [];
@@ -52,27 +60,6 @@ export const usePnPService = (spfxContext: WebPartContext | ApplicationCustomize
         }
     };
 
-    // const getDocsByGraphSearch = async (searchReq: SearchRequest): Promise<ISearchResultExtended[]> => {
-    //     try {
-    //         const locSearchResults: ISearchResultExtended[] = [];
-    //         const graphCache = getCacheFI("Graph");
-
-    //         Logger.write(`Issuing search query: ${searchReq.query.queryString}`, LogLevel.Verbose);
-    //         const results = await graphCache.query(searchReq);
-
-    //         locSearchResults.push(...GraphResponseToSearchResultMapper(results));
-
-    //         if (results[0].hitsContainers[0].moreResultsAvailable) {
-    //             //TODO handle pagination
-    //             // locSearchResults = await fetchSearchResultsAll(page + 500, searchResults)
-    //         }
-    //         return locSearchResults;
-    //     } catch (error) {
-    //         throw error;
-    //     }
-    // }
-
-    // Return functions
     return {
         getSiteGroups
     };

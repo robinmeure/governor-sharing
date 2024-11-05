@@ -5,7 +5,15 @@ import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers } 
 import { DrivePermissionResponse } from "../services/useGraphService";
 
 
-
+/**
+ * Maps a Graph Search Response to a specific type based on the provided entity type.
+ *
+ * @template T - The type to which the search response will be mapped.
+ * @param {SearchResponse[]} searchResponse - The search response from the Graph API.
+ * @param {EntityType[]} entityType - The types of entities to map from the search response.
+ * @returns {T[]} - An array of mapped values of type T.
+ * @throws Will throw an error if the mapping process fails.
+ */
 export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], entityType: EntityType[]): T[] => {
 
     try {
@@ -72,6 +80,14 @@ export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], e
     }
 }
 
+
+/**
+ * Maps a file and its drive item permissions to a file sharing response.
+ *
+ * @param {IListItemSearchResponse} file - The file information from the search response.
+ * @param {DrivePermissionResponse} driveItem - The drive item permissions response.
+ * @returns {IFileSharingResponse} - The mapped file sharing response.
+ */
 export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, driveItem: DrivePermissionResponse): IFileSharingResponse => {
     const sharedWithUser: IFacepilePersona[] = [];
     const sharedWithUser2: ISharedUser[] = [];

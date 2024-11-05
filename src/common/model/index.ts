@@ -1,4 +1,5 @@
-import { DeleteAction, Identity } from "@microsoft/microsoft-graph-types";
+import { Identity } from "@microsoft/microsoft-graph-types";
+import { DeleteAction } from "@microsoft/microsoft-graph-types-beta";
 
 export interface IDriveItems {
     driveId: string;

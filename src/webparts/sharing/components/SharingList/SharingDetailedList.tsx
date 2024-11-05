@@ -1,4 +1,4 @@
-import { Text, ShimmeredDetailsList, SearchBox, Stack, ActionButton, IColumn, SelectionMode, MessageBar, MessageBarType, Persona, PersonaSize, PrimaryButton } from '@fluentui/react';
+import { Text, ShimmeredDetailsList, SearchBox, Stack, ActionButton, IColumn, SelectionMode, MessageBar, MessageBarType, Persona, PersonaSize, PrimaryButton, FontIcon } from '@fluentui/react';
 import * as React from 'react';
 import * as moment from 'moment';
 import { useContext, useEffect, useState, useMemo } from 'react';
@@ -14,7 +14,7 @@ import { useBoolean } from '@fluentui/react-hooks';
 import SharedWithColumn from './columnRender/SharedWithColumn';
 import FileExtentionColumn from './columnRender/FileExtentionColumn';
 import LinkColumn from './columnRender/LinkColumn';
-import FileDetailPanel from './panelRender/FileDetailPanel';
+import FilePermissionPanel from './panelRender/FilePermissionPanel';
 import FilterPanel, { IFilterItem } from './panelRender/FilterPanel';
 
 
@@ -312,17 +312,12 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                                 onDismissFilterPanel={async (newFilter) => {
                                     dismissFilterPanel();
                                     if (newFilter) {
-                                        //check for server refresh
-                                        const isServerRefresh = (newFilter.siteUrl !== paginationFilterState.filterVal.siteUrl) || (newFilter.fileFolder !== paginationFilterState.filterVal.fileFolder);
                                         const updatedFilter: IPaginationFilterState = {
                                             ...paginationFilterState,
                                             filterVal: newFilter,
                                             currentPage: 1,
-                                            isRefreshData: isServerRefresh
+                                            isRefreshData: true
                                         };
-                                        // if (!isServerRefresh) {
-                                        //     localDataFilter(updatedFilter, ["SharedType"]);
-                                        // }
                                         setPaginationFilterState(updatedFilter);
                                     }
                                 }}
@@ -333,8 +328,20 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 </Stack>
             </div>
 
+            <div style={{ padding: "12px 0" }}>
+                {/* show filtered items here */}
+                {paginationFilterState.filterVal.siteUrl && <div>
+                    <FontIcon style={{ marginRight: 4 }} aria-label="Filter" iconName="Filter" />
+                    <Text variant="small">Site: <i>{paginationFilterState.filterVal.siteUrl}</i></Text>
+                </div>}
+                {paginationFilterState.filterVal.fileFolder !== "BothFilesFolders" && <div>
+                    <FontIcon style={{ marginRight: 4 }} aria-label="Filter" iconName="Filter" />
+                    <Text variant="small">Type: <i>{paginationFilterState.filterVal.fileFolder}</i></Text>
+                </div>}
+            </div>
+
             {paginationFilterState.selectedDocument && (
-                <FileDetailPanel
+                <FilePermissionPanel
                     isOpen={!!paginationFilterState.selectedDocument}
                     file={paginationFilterState.selectedDocument}
                     onDismiss={() => setPaginationFilterState(prevState => ({ ...prevState, selectedDocument: undefined, isRefreshData: false }))}

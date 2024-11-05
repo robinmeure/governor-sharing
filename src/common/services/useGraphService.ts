@@ -22,6 +22,10 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
 
     let graphClient: MSGraphClientV3;
 
+    /**
+     * Initializes the MSGraphClientV3 instance if it is not already initialized.
+     * @returns {Promise<void>} A promise that resolves when the client is initialized.
+    */
     const initializeGraphClient = async (): Promise<void> => {
         if (!graphClient) {
             const client = await spfxContext.msGraphClientFactory.getClient("3") as MSGraphClientV3;
@@ -31,6 +35,12 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
         }
     };
 
+    /**
+     * Executes a search query using Microsoft Graph API.
+     * @param {SearchRequest} searchReq - The search request object.
+     * @returns {Promise<SearchResponse[]>} A promise that resolves to an array of search responses.
+     * @throws Will throw an error if the search request fails.
+     */
     const getByGraphSearch = async (searchReq: SearchRequest): Promise<SearchResponse[]> => {
         try {
             await initializeGraphClient();
@@ -47,6 +57,12 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
         }
     }
 
+    /**
+     * Retrieves the permissions for a list of drive items using Microsoft Graph API.
+     * @param {Record<string, IDriveItems>} listItems - A record of drive items with their IDs as keys.
+     * @returns {Promise<DrivePermissionResponse[]>} A promise that resolves to an array of drive permission responses.
+     * @throws Will throw an error if the request for permissions fails.
+     */
     const getDriveItemsPermission = async (listItems: Record<string, IDriveItems>): Promise<DrivePermissionResponse[]> => {
         try {
             await initializeGraphClient();
@@ -80,6 +96,7 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
             });
 
             await Promise.all(driveItemsPromises);
+            console.log("FazLog ~ getDriveItemsPermission ~ driveItemPermissions:", driveItemPermissions);
             return driveItemPermissions;
         } catch (error) {
             console.error("getDriveItemsPermission ~ error", error);
@@ -87,6 +104,12 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
         }
     }
 
+    /**
+     * Retrieves the activity for a specific drive item using the beta version of Microsoft Graph API.
+     * @param {{ driveId: string, itemId: string }} file - An object containing the drive ID and item ID.
+     * @returns {Promise<ItemActivityOLD[] | undefined>} A promise that resolves to an array of item activities or undefined if no activities are found.
+     * @throws Will throw an error if the request for item activities fails.
+     */
     const getItemsActivityBETA = async (file: { driveId: string, itemId: string }): Promise<ItemActivityOLD[] | undefined> => {
         try {
             await initializeGraphClient();

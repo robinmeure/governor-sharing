@@ -1,13 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as React from 'react'
-import { Checkbox, ChoiceGroup, DefaultButton, Dropdown, IChoiceGroupOption, IDropdownOption, Label, Panel, PrimaryButton, TextField } from '@fluentui/react';
-import { useEffect, useState } from 'react';
-import { ISiteSearchResponse, SharedType } from '../../../../../common/model';
-import { SearchRequest } from '@microsoft/microsoft-graph-types';
-import { GraphSearchResponseMapper } from '../../../../../common/config/Mapper';
-import { useGraphService } from '../../../../../common/services/useGraphService';
-import { _CONST } from '../../../../../common/utils/Const';
+import { Checkbox, ChoiceGroup, DefaultButton, IChoiceGroupOption, Label, Panel, PrimaryButton, TextField, Toggle } from '@fluentui/react';
+import { useContext, useState } from 'react';
+import { SharedType } from '../../../../../common/model';
+import { IPeoplePickerContext, PeoplePicker, PrincipalType } from "@pnp/spfx-controls-react/lib/PeoplePicker";
 import { SharingWebPartContext } from '../../../hooks/SharingWebPartContext';
+
 
 type FileFolderFilter = "OnlyFiles" | "OnlyFolders" | "BothFilesFolders";
 export interface IFilterItem {
@@ -26,39 +25,21 @@ interface IFilterPanelProps {
 
 const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
-    const { webpartContext } = React.useContext(SharingWebPartContext);
-    const { getByGraphSearch } = useGraphService(webpartContext);
+    const { webpartContext } = useContext(SharingWebPartContext);
+    const peoplePickerContext: IPeoplePickerContext = {
+        absoluteUrl: webpartContext.pageContext.web.absoluteUrl,
+        msGraphClientFactory: webpartContext.msGraphClientFactory as any,
+        spHttpClient: webpartContext.spHttpClient as any,
+    };
+
     const [filtreVal, setFilterVal] = useState<IFilterItem>(props.filterItem);
+    const [isSearchOneDrive, setIsSearchOneDrive] = useState<boolean>(filtreVal.siteUrl.indexOf("-my.sharepoint.com") > -1);
 
-    const [siteFilterOptions, setSiteFilterOptions] = useState<IDropdownOption[]>([]);
-
-    useEffect(() => {
-        const getFilerValues = async (): Promise<void> => {
-            const searchReqForSites: SearchRequest & { trimDuplicates: boolean } = {
-                entityTypes: _CONST.GraphSearch.SiteSearch.EntityType,
-                query: {
-                    queryString: "*"
-                },
-                trimDuplicates: true // https://github.com/microsoftgraph/msgraph-sdk-java/issues/1315
-            };
-            const siteSearchRes = await getByGraphSearch(searchReqForSites);
-            const locSearchItems = GraphSearchResponseMapper<ISiteSearchResponse>(siteSearchRes, _CONST.GraphSearch.SiteSearch.EntityType);
-            const siteOptions = locSearchItems.map(item => {
-                const parsedUrl = new URL(item.url);
-                return {
-                    key: item.url,
-                    text: item.name + `(${parsedUrl.pathname})`
-                }
-            });
-            setSiteFilterOptions(siteOptions);
-        }
-        getFilerValues().catch(error => console.log("init ~ error", error));
-    }, []);
-
+    // Define the options for the file/folder filter with the correct type for the key
     const fileFolderOptions: IChoiceGroupOption[] = [
         { key: "BothFilesFolders" as FileFolderFilter, text: 'Both files & folders' },
-        { key: 'OnlyFiles', text: 'Only files' },
-        { key: 'Only Folders', text: 'Only folders' }
+        { key: 'OnlyFiles' as FileFolderFilter, text: 'Only files' },
+        { key: 'OnlyFolders' as FileFolderFilter, text: 'Only folders' }
     ];
 
     return <div>
@@ -82,33 +63,54 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
             <div>
 
                 <div style={{ padding: "12px 0" }}>
-                    <Label>Site Url</Label>
-                    <div>
-                        {/* <TextField
+                    <Toggle label="Search user ondrive"
+                        checked={isSearchOneDrive}
+                        onChange={(_e, checked) => {
+                            setIsSearchOneDrive(checked ?? false);
+                            if (checked) {
+                                setFilterVal({ ...filtreVal, siteUrl: "" });
+                            }
+                        }} />
+
+                    <div style={{ paddingLeft: "6px" }}>
+                        <TextField
                             multiline
+                            label='Site Url'
                             resizable={false}
+                            disabled={isSearchOneDrive}
                             value={filtreVal.siteUrl}
                             onChange={(e, newVal = '') => setFilterVal({ ...filtreVal, siteUrl: newVal })}
                             placeholder={`https://contoso.sharepoint.com/sites/...`}
-                            description="Url of the site" /> */}
-                        {siteFilterOptions?.length < 50 ? <>
-                            <Dropdown
-                                selectedKey={filtreVal.siteUrl}
-                                options={siteFilterOptions}
-                                onChange={(_e, op) => {
-                                    setFilterVal({ ...filtreVal, siteUrl: op?.key as string })
-                                }} />
-                        </> : <>
-                            <TextField
-                                multiline
-                                resizable={false}
-                                value={filtreVal.siteUrl}
-                                onChange={(e, newVal = '') => setFilterVal({ ...filtreVal, siteUrl: newVal })}
-                                placeholder={`https://contoso.sharepoint.com/sites/...`}
-                                description="Url of the site" />
-                        </>}
+                            description="Url of the site" />
+
+                        <PeoplePicker
+                            context={peoplePickerContext}
+                            titleText="OneDrive of the user"
+                            personSelectionLimit={1}
+                            disabled={!isSearchOneDrive}
+                            searchTextLimit={2}
+                            onChange={(items) => {
+                                if (items.length > 0) {
+                                    let selectedUserEmail = items[0].secondaryText ?? "";
+                                    if (!selectedUserEmail) {
+                                        selectedUserEmail = items[0].id ?? "";
+                                        selectedUserEmail = selectedUserEmail.split("|")[2];
+                                    }
+                                    const locSelectedUser = selectedUserEmail.replace(/[^a-zA-Z0-9]/g, "_") ?? "";
+                                    const tenantUrl = webpartContext.pageContext.web.absoluteUrl.split(".sharepoint.com")[0];
+                                    const oneDriveUrl = `${tenantUrl}-my.sharepoint.com/personal/${locSelectedUser}`;
+                                    setFilterVal({ ...filtreVal, siteUrl: oneDriveUrl });
+                                } else {
+                                    setFilterVal({ ...filtreVal, siteUrl: "" });
+                                }
+                            }
+                            }
+                            principalTypes={[PrincipalType.User]}
+                            resolveDelay={1000} />
                     </div>
                 </div>
+
+
 
                 <div style={{ padding: "12px 0" }}>
                     <Label>Shared Type</Label>
@@ -146,10 +148,10 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
                 <div style={{ padding: "12px 0" }}>
                     <ChoiceGroup options={fileFolderOptions}
+                        selectedKey={filtreVal.fileFolder}
                         onChange={(_e, op) => {
                             setFilterVal({ ...filtreVal, fileFolder: op?.key as FileFolderFilter })
-                        }} label="Item type"
-                        required={true} />
+                        }} label="Item type" />
                 </div>
             </div>
         </Panel>
