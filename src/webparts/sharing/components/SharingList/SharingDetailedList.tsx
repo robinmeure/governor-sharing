@@ -75,7 +75,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
             const searchResponse = await getByGraphSearch(searchReqForDocs);
             const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
-            console.log("FazLog ~ getFiles ~ locSearchItems:", locSearchItems);
             return locSearchItems;
         } catch (error) {
             setLoadingErrorState(prevState => ({ ...prevState, error: "Error fetching files", loading: false }));

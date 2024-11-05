@@ -7,6 +7,7 @@ import { SharingWebPartContext } from '../../../hooks/SharingWebPartContext';
 import { useEffect, useState } from 'react';
 import { ItemActivityOLD } from '@microsoft/microsoft-graph-types-beta';
 import ItemActivities from '../../helper/ItemActivities';
+import { MessageBar, MessageBarType, Spinner } from '@fluentui/react';
 
 interface IFileActivityPanelProps {
     file: IFileSharingResponse;
@@ -16,36 +17,51 @@ interface IFileActivityPanelProps {
 const FileActivityPanel: React.FC<IFileActivityPanelProps> = ({ file }): JSX.Element => {
     const governContext = React.useContext(SharingWebPartContext);
     const webpartContext = governContext.webpartContext;
-    const { getItemsActivity } = useGraphService(webpartContext);
+    const { getItemsActivityBETA } = useGraphService(webpartContext);
 
     const [itemActivities, setItemActivities] = useState<ItemActivityOLD[] | undefined>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string>("");
 
     useEffect(() => {
         const getActivity = async (): Promise<void> => {
-            const responseItemActivity = await getItemsActivity({
-                driveId: file.DriveId,
-                itemId: file.FileId
-            });
-            console.log("FazLog ~ getActivity ~ responseItemActivity:", responseItemActivity);
-            setItemActivities(responseItemActivity);
+            try {
+                setError("");
+                const responseItemActivity = await getItemsActivityBETA({
+                    driveId: file.DriveId,
+                    itemId: file.FileId
+                });
+                setItemActivities(responseItemActivity);
+            } catch (error) {
+                setError(error);
+            }
+            setLoading(false);
         }
         getActivity().catch(e => console.error(e));
     }, []);
 
-    return <div>
-        <div>
-            {itemActivities && <div>
-                <ItemActivities items={itemActivities} />
-                {/* {itemActivity.map(val => {
-                    return <div key={val.id}>
-                        {val.id}
-                        {val.action}
-                        {val.actor}
-                        {val.times}
-                    </div>
-                })} */}
-            </div>}
+    if (loading) {
+        return <div style={{ paddingTop: "50%" }}>
+            <Spinner label='loading activities...' />
         </div>
+    }
+
+    if (error) {
+        return <MessageBar messageBarType={MessageBarType.error}>
+            Something went wrong while fetching activities.
+        </MessageBar>
+    }
+
+    return <div>
+        {itemActivities?.length === 0 && <div>
+            <MessageBar messageBarType={MessageBarType.info}>
+                No activities found.
+            </MessageBar>
+        </div>}
+
+        {itemActivities && itemActivities.length > 0 && <div>
+            <ItemActivities items={itemActivities} />
+        </div>}
     </div>
 }
 

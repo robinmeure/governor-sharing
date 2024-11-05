@@ -15,7 +15,7 @@ export interface DrivePermissionResponse {
 interface IGraphService {
     getDriveItemsPermission(driveItems: Record<string, IDriveItems>): Promise<DrivePermissionResponse[]>;
     getByGraphSearch(searchReq: SearchRequest): Promise<SearchResponse[]>;
-    getItemsActivity(file: { driveId: string, itemId: string }): Promise<ItemActivityOLD[] | undefined>;
+    getItemsActivityBETA(file: { driveId: string, itemId: string }): Promise<ItemActivityOLD[] | undefined>;
 }
 
 export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomizerContext): IGraphService => {
@@ -32,14 +32,19 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
     };
 
     const getByGraphSearch = async (searchReq: SearchRequest): Promise<SearchResponse[]> => {
-        await initializeGraphClient();
-        const response = await graphClient.api('/search/query')
-            .post({
-                requests: [
-                    searchReq
-                ]
-            });
-        return response?.value;
+        try {
+            await initializeGraphClient();
+            const response = await graphClient.api('/search/query')
+                .post({
+                    requests: [
+                        searchReq
+                    ]
+                });
+            return response?.value;
+        } catch (error) {
+            console.log("getByGraphSearch ~ error:", error);
+            throw error;
+        }
     }
 
     const getDriveItemsPermission = async (listItems: Record<string, IDriveItems>): Promise<DrivePermissionResponse[]> => {
@@ -82,20 +87,19 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
         }
     }
 
-    const getItemsActivity = async (file: { driveId: string, itemId: string }): Promise<ItemActivityOLD[] | undefined> => {
+    const getItemsActivityBETA = async (file: { driveId: string, itemId: string }): Promise<ItemActivityOLD[] | undefined> => {
         try {
             await initializeGraphClient();
 
             const activities = await graphClient.api(`/drives/${file.driveId}/items/${file.itemId}/activities`)
                 .version('beta')
                 .get();
-            console.log("FazLog ~ getItemsActivity ~ activities:", activities);
             if (activities) {
                 return activities.value as ItemActivityOLD[];
             }
             return undefined;
         } catch (error) {
-            console.error("getDriveItemsPermission ~ error", error);
+            console.error("getItemsActivityBETA ~ error", error);
             throw error;
         }
     }
@@ -103,7 +107,7 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
     return {
         getDriveItemsPermission,
         getByGraphSearch,
-        getItemsActivity
+        getItemsActivityBETA
     };
 
 }

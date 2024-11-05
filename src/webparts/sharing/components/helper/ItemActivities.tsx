@@ -1,7 +1,7 @@
 
 import * as React from 'react'
 import { Identity, ItemActionSet, ItemActivityOLD, NullableOption } from '@microsoft/microsoft-graph-types-beta';
-import { ActivityItem, IActivityItemProps, Link, mergeStyleSets, Persona, PersonaSize } from '@fluentui/react';
+import { ActivityItem, IActivityItemProps, Link, mergeStyleSets, Persona, PersonaSize, TooltipHost } from '@fluentui/react';
 import * as moment from 'moment';
 
 interface IItemActivitiesProps {
@@ -55,7 +55,6 @@ const getItemAction = (value: NullableOption<ItemActionSet> | undefined): JSX.El
         return <span><b>restored</b></span>;
     }
     if (value?.share) {
-        console.log("FazLog ~ getItemAction ~ value?.share:", value?.share);
         if (value.share.recipients) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             return <span><b>shared</b> with {value.share.recipients.map((val: any, index) => <Persona
@@ -89,13 +88,22 @@ const ItemActivities: React.FC<IItemActivitiesProps> = ({ items }): JSX.Element 
         return {
             key: index,
             activityDescription: [
-                <Link
-                    key={index + "1"}
-                    className={classNames.nameText}
-                >
-                    {actor?.displayName || ''}
-                </Link>,
-                <span key={index + "2"}> {getItemAction(item.action) ?? ""} </span>
+                <div key={index} id={index + "0"} style={{ display: "flex" }}>
+                    <Link
+                        key={index + "1"}
+                    >
+                        {/* {actor?.displayName || ''} */}
+                        <TooltipHost content={actor?.email || ""} id='actor'>
+                            <Persona
+                                text={item.actor?.user?.displayName || ""}
+                                size={PersonaSize.size8}
+                                imageAlt={item.actor?.user?.displayName || ''}
+                                imageUrl={`${window.location.origin}/_layouts/15/userphoto.aspx?size=M&username=${actor?.email}`}
+                            />
+                        </TooltipHost>
+                    </Link>
+                    <div key={index + "2"}> {getItemAction(item.action) ?? ""} </div>
+                </div>
             ],
             // activityDescription: [
             //         {/* <TooltipHost content={actor?.email || ""} id='actor'> */}
