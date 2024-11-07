@@ -14,7 +14,7 @@ It does this by using the following steps:
 - Enable debug mode as a webpart property to see the query that the Graph Search API is triggering or by adding query string `debug=true`.
 
 Here is an example with a list of shared documents, with a clear distinction when they are shared with external users (notice the tooltip & icon in front of the document):
-![Example Image](/assets/screenshot_v2.png)
+![Example Image](/assets/Screenshot_v2.png)
 
 When you want to know more about the sharing settings of a particular document, you can click on the view icon of the document. This will open up the Side Panel which has the Manage Access component rendered through an iFrame, indicating that a sharing link was created for the external user.
 ![Example Image](/assets/screenshot2_v2.png)
