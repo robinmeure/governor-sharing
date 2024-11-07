@@ -4,13 +4,13 @@
     "name": "Governor Sharing",
     "id": "81a9fd71-f423-4420-8a6d-393fba93dc95",
     "iconPath": "530be57e-cc29-49a2-9596-2068462b6d9a_96_color.png",
-    "version": "2.0.0.6",
+    "version": "3.0.0.1",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
     "developer": {
-      "name": "Robin Meure",
-      "websiteUrl": "http://github.com/robinmeure",
+      "name": "Robin Meure, Ahamed Fazil",
+      "websiteUrl": "http://github.com/robinmeure, https://github.com/ahamedfazil",
       "privacyUrl": "https://privacy.microsoft.com/en-us/privacystatement",
       "termsOfUseUrl": "https://www.microsoft.com/en-us/servicesagreement",
       "mpnId": "Undefined-1.15.0"

@@ -6,18 +6,20 @@
   "version": "*",
   "manifestVersion": 2,
   "requiresCustomScript": false,
-  "supportedHosts": ["SharePointWebPart","TeamsTab"],
+  "supportedHosts": ["SharePointWebPart", "TeamsTab"],
   "supportsThemeVariants": true,
 
-  "preconfiguredEntries": [{
-    "groupId": "5c03119e-3074-46fd-976b-c60198311f70", 
-    "group": { "default": "Governor" },
-    "title": { "default": "Governor Sharing" },
-    "description": { "default": "Shows explicit sharing of documents" },
-    "officeFabricIconFontName": "Page",
-    "properties": {
-      "description": "Sharing",
-      "debugMode":false
+  "preconfiguredEntries": [
+    {
+      "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+      "group": { "default": "Governor" },
+      "title": { "default": "Governor Sharing" },
+      "description": { "default": "Shows explicit sharing of documents" },
+      "officeFabricIconFontName": "SecurityGroup",
+      "properties": {
+        "webpartTitle": "",
+        "debugMode": false
+      }
     }
-  }]
+  ]
 }

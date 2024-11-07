@@ -199,7 +199,7 @@ export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter
   const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
 
   const filterVal = queryFilter.filterVal;
-  const searchQuery = queryFilter.searchQuery ? queryFilter.searchQuery + " " : "";
+  const searchQuery = queryFilter.searchKeyword ? queryFilter.searchKeyword + " " : "";
   const siteFilter = filterVal.siteUrl ? `(SPSiteUrl:${filterVal.siteUrl}) ` : "";
   const testFilter = DEBUG ? "" : "";
   let fileFolderFilter = "(IsDocument:TRUE OR IsContainer:TRUE) ";

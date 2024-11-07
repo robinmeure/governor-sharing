@@ -6,7 +6,6 @@ export interface IDriveItems {
     itemId: string;
 }
 
-
 export interface ISharedUser {
     displayName: string,
     id: string,
@@ -14,8 +13,6 @@ export interface ISharedUser {
 }
 
 export type SharedType = "Link" | "Inherited" | "Member" | "Guest" | "Everyone" | "Group";
-//#region Graph API Response Interfaces "Owner" |
-
 
 export interface IFileSharingResponse {
     DriveId: string;
@@ -53,6 +50,11 @@ export interface IListItemSearchResponse {
     // Rank: number;
     // DocId: number;
     // WorkId: number;
+}
+
+export interface IGraphResponseMetadata {
+    moreResultsAvailable: boolean;
+    totalResults: number;
 }
 
 export interface ISiteSearchResponse {

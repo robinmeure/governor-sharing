@@ -10,7 +10,7 @@ import {
   ConsoleListener,
   LogLevel
 } from "@pnp/logging";
-import { IPropertyPaneConfiguration, PropertyPaneToggle } from '@microsoft/sp-property-pane';
+import { IPropertyPaneConfiguration, PropertyPaneTextField, PropertyPaneToggle } from '@microsoft/sp-property-pane';
 import { ISharingWebPartContext } from './model';
 import { SharingWebPartContext } from './hooks/SharingWebPartContext';
 import SharingApp from './components/SharingApp';
@@ -18,7 +18,7 @@ import SharingApp from './components/SharingApp';
 const LOG_SOURCE: string = 'Microsoft-Governance-Sharing';
 
 export interface ISharingWebPartProps {
-  description: string;
+  webpartTitle: string;
   debugMode: boolean;
 }
 
@@ -31,18 +31,16 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
 
     // setting up the logging framework
     Logger.subscribe(ConsoleListener(LOG_SOURCE));
-    Logger.activeLogLevel = (this.properties.debugMode) ? LogLevel.Verbose : LogLevel.Warning;
-
-    // if you don't want to send telemetry data to PnP, you can opt-out here (see https://github.com/pnp/telemetry-js for details on what is being sent)
-    // const telemetry = PnPTelemetry.getInstance();
-    // telemetry.optOut();
+    const debug = new URLSearchParams(window.location.search).get("debug") === "true" || this.properties.debugMode;
+    Logger.activeLogLevel = debug ? LogLevel.Verbose : LogLevel.Warning;
   }
 
   public render(): void {
     const sharingWebPartContextValue: ISharingWebPartContext = {
       pageLimit: 15,
       webpartContext: this.context,
-      isTeams: this.context.sdks.microsoftTeams ? true : false
+      isTeams: this.context.sdks.microsoftTeams ? true : false,
+      webpartProperties: this.properties
     };
     // Put the context value with Provider
     const element: React.ReactElement = React.createElement(
@@ -55,33 +53,19 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
 
     // eslint-disable-next-line @microsoft/spfx/pair-react-dom-render-unmount
     ReactDom.render(element, this.domElement);
-
-
-
-    // const element: React.ReactElement<ISharingViewProps> = React.createElement(
-    //   SharingViewSingle,
-    //   {
-    //     pageLimit: 15,
-    //     context: this.context,
-    //     isTeams: false,
-    //     dataProvider: this.dataProvider
-    //   }
-    // );
-    // // eslint-disable-next-line @microsoft/spfx/pair-react-dom-render-unmount
-    // ReactDom.render(element, this.domElement);
   }
 
   protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
     return {
       pages: [
         {
-          header: {
-            description: this.properties.description
-          },
           groups: [
             {
               groupName: "Configuration",
               groupFields: [
+                PropertyPaneTextField('webpartTitle', {
+                  label: "Webpart title"
+                }),
                 PropertyPaneToggle('debugMode', {
                   label: "Enable debug mode",
                 })

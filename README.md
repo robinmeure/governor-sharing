@@ -5,6 +5,7 @@
 SPFx WebPart shows documents which have been (explicitly) shared within a SharePoint site or Team.
 
 It does this by using the following steps:
+
 - Issueing a Search Query (KQL) against the Graph API to retrieve documents where the managed property SharedWithUsersOWSUSER contains a value
 - Iterate through the result of the search query to get the permissions (e.g. sharing information) per file (/permissions endpoint of driveItems on GraphAPI)
 - Show the results in a ShimmeredDetailsList and the Pagination control for paging the results
@@ -29,26 +30,30 @@ When you want to know more about the sharing settings of a particlar document, y
 
 ## Minimal Path to Awesome
 
-* Clone this repository
-* Move to right solution folder
-* in the command line run:
-  * `npm install`
-  * `gulp serve`
+- Clone this repository
+- Move to right solution folder
+- in the command line run:
+  - `npm install`
+  - `gulp serve`
 
 ## Solution
 
-| Solution    | Author(s)                                               |
-| ----------- | ------------------------------------------------------- |
-| Governor Sharing | Robin Meure MSFT                                        |
+| Solution         | Author(s)           |
+| ---------------- | ------------------- |
+| Governor Sharing | Robin Meure MSFT    |
+| Governor Sharing | Ahamed Fazil Buhari |
 
 ## Version history
 
-| Version | Date             | Comments        |
-| ------- | ---------------- | --------------- |
-| 1.0     | October 27, 2023 | Initial release |
+| Version | Date              | Comments        |
+| ------- | ----------------- | --------------- |
+| 1.0     | October 27, 2023  | Initial release |
+| 2.0     | November 11, 2024 | Initial release |
 
 ## Deployment Overview
+
 - [SharePoint App Deployment](#sharepoint-app-deployment)
+
   - [Prerequisites](#prerequisites-1)
   - [Step 1 - Add the app to the SharePoint App catalog](#step-1---add-the-app-to-the-sharepoint-app-catalog)
   - [Step 2 - Provide API consent](#step-2---provide-api-consent)
@@ -62,8 +67,9 @@ When you want to know more about the sharing settings of a particlar document, y
 # SharePoint App Deployment
 
 ## Prerequisites
+
 - A copy of the solution .sppkg package.
-- The user deploying an app must be a SharePoint Administrator or Global Administrator in Microsoft 365. 
+- The user deploying an app must be a SharePoint Administrator or Global Administrator in Microsoft 365.
 - The same user needs to approve and provide consent for the API permissions (this to call the Graph Search endpoint).
 
 ## Step 1 - Add the app to the SharePoint App catalog
@@ -111,6 +117,7 @@ You will provide delegated permissions that will allow the application to act on
 For the Teams App deployment, the app needs to be deployed to the SharePoint App Catalog first (Step 1 and Step 2).
 
 ## Prerequisites
+
 - A copy of the Teams Apps solution [package](/assets/governorsharing_teamspackage.zip)
 - The user deploying the app must be a Teams Administrator or Global Administrator in Microsoft 365.
 
@@ -135,7 +142,7 @@ For the Teams App deployment, the app needs to be deployed to the SharePoint App
 <img src="assets/Govenor_Sharing_AddtoTeam.png" width="500"/>
 
 - Click on <b>Add to a team</b>, choose a team and a channel where you want the app to be added and click <b>Set up a tab</b> on the bottom right of the pop-up window.
-<img src="assets/Govenor_Sharing_AddtoTeamTab.png" width="500"/>
+  <img src="assets/Govenor_Sharing_AddtoTeamTab.png" width="500"/>
 
 <img src="assets/Govenor_Sharing_AddtoTeam_SelectTeam.png" width="500"/>
 
@@ -147,8 +154,7 @@ For the Teams App deployment, the app needs to be deployed to the SharePoint App
 
 <img src="assets/Govenor_Sharing_AddedtoTeam.png" width="500"/>
 
-
-# Troubleshooting 
+# Troubleshooting
 
 If you face any other errors, you can enable the debugging mode from the configuration pane. When this is enabled, there is a lot more details being outputted to the written to the console.
 
@@ -164,8 +170,7 @@ Issue: We can't upload the app because there's already an app in the catalog wit
 
 Solution: Detele the app in the Teams Apps overview and re-add the package.
 
-More information about deleting apps in Teams can found here: https://learn.microsoft.com/en-us/microsoftteams/teams-custom-app-policies-and-settings#delete-custom-apps-from-your-organizations-catalog 
-
+More information about deleting apps in Teams can found here: https://learn.microsoft.com/en-us/microsoftteams/teams-custom-app-policies-and-settings#delete-custom-apps-from-your-organizations-catalog
 
 <img src="https://pnptelemetry.azurewebsites.net/sp-dev-solutions/solutions/governorsharing" />
 

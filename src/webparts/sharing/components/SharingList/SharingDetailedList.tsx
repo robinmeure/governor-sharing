@@ -1,21 +1,18 @@
-import { Text, ShimmeredDetailsList, SearchBox, Stack, ActionButton, IColumn, SelectionMode, MessageBar, MessageBarType, Persona, PersonaSize, PrimaryButton, FontIcon } from '@fluentui/react';
+import { ShimmeredDetailsList, SelectionMode, MessageBar, MessageBarType } from '@fluentui/react';
 import * as React from 'react';
-import * as moment from 'moment';
-import { useContext, useEffect, useState, useMemo } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
 import { Pagination } from '@pnp/spfx-controls-react';
 import { searchQueryGeneratorForDocs } from '../../../../common/utils/Utils';
 import { SearchRequest } from '@microsoft/microsoft-graph-types';
 import { _CONST } from '../../../../common/utils/Const';
 import { useGraphService } from '../../../../common/services/useGraphService';
-import { IDriveItems, IFileSharingResponse, IListItemSearchResponse } from '../../../../common/model';
-import { DrivePermissionResponseMapper, GraphSearchResponseMapper } from '../../../../common/config/Mapper';
-import { useBoolean } from '@fluentui/react-hooks';
-import SharedWithColumn from './columnRender/SharedWithColumn';
-import FileExtentionColumn from './columnRender/FileExtentionColumn';
-import LinkColumn from './columnRender/LinkColumn';
-import FilePermissionPanel from './panelRender/FilePermissionPanel';
-import FilterPanel, { IFilterItem } from './panelRender/FilterPanel';
+import { IDriveItems, IFileSharingResponse, IGraphResponseMetadata, IListItemSearchResponse } from '../../../../common/model';
+import { DrivePermissionResponseMapper, GraphSearchResponseMapper, GraphSearchResultMetadata } from '../../../../common/config/Mapper';
+import FilePermissionPanel from './itemDetail/FilePermissionPanel';
+import { IFilterItem } from './filter/FilterPanel';
+import FilterItems from './filter/FilterItems';
+import Columns from './columnRender/Columns';
 
 
 interface ILoadingErrorState {
@@ -24,9 +21,11 @@ interface ILoadingErrorState {
 }
 
 export interface IPaginationFilterState {
-    searchQuery: string;
+    searchKeyword: string;
+    queryString: string;
     currentPage: number;
     totalPages: number;
+    searchMetadata: IGraphResponseMetadata | undefined;
     filterVal: IFilterItem;
     selectedDocument: IFileSharingResponse | undefined;
     isRefreshData: boolean
@@ -46,27 +45,27 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         currentPage: 1,
         totalPages: 1,
         filterVal: {
-            siteUrl: webpartContext.pageContext.site.absoluteUrl,
+            siteUrl: "", //webpartContext.pageContext.site.absoluteUrl,
             sharedType: ["Link", "Inherited", "Member", "Guest", "Everyone", "Group"],
             modifiedBy: "",
             fileFolder: "BothFilesFolders"
         },
+        searchMetadata: undefined,
         selectedDocument: undefined,
-        searchQuery: "",
+        searchKeyword: "",
+        queryString: "",
         isRefreshData: false
     });
-
 
     const [searchItems, setSearchItems] = useState<IListItemSearchResponse[]>([]);
     const [sharedFiles, setSharedFiles] = useState<IFileSharingResponse[]>([]);
 
-    const [isFilterPanelOpen, { setTrue: openFilterPanel, setFalse: dismissFilterPanel }] = useBoolean(false);
-
     const getFiles = async (queryFilter: IPaginationFilterState): Promise<IListItemSearchResponse[]> => {
         try {
+            const queryString = searchQueryGeneratorForDocs(webpartContext, queryFilter);
             const searchReqForDocs: SearchRequest & { trimDuplicates: boolean } = {
                 entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
-                query: { queryString: searchQueryGeneratorForDocs(webpartContext, queryFilter) },
+                query: { queryString: queryString },
                 fields: _CONST.GraphSearch.DocsSearch.Fields,
                 from: 0,
                 size: 500,
@@ -74,6 +73,14 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             };
 
             const searchResponse = await getByGraphSearch(searchReqForDocs);
+            const searchMetadata = GraphSearchResultMetadata(searchResponse);
+            if (searchMetadata) {
+                setPaginationFilterState(prevState => ({
+                    ...prevState,
+                    searchMetadata: searchMetadata,
+                    queryString: queryString
+                }));
+            }
             const locSearchItems = GraphSearchResponseMapper<IListItemSearchResponse>(searchResponse, _CONST.GraphSearch.DocsSearch.EntityType);
             return locSearchItems;
         } catch (error) {
@@ -108,8 +115,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 return acc;
             }, {} as Record<string, IDriveItems>);
 
-            // const locSpGroups: string[] = await pnpService.getSiteGroups();
-
             const locSearchItems = searchItems.filter(item => paginatedItems.includes(item.FileId));
             const driveItemsPermissions = await getDriveItemsPermission(paginatedListItems);
             const sharedResults = driveItemsPermissions.map(driveItem => {
@@ -124,6 +129,18 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 return null;
             }).filter(Boolean) as IFileSharingResponse[];
 
+            // check if paginationFilterState.filterVal.sharedType is not empty
+            // if (paginationFilterState.filterVal.sharedType.length > 0) {
+            //     const filteredSharedResults = sharedResults.filter(result => {
+            //         if (result.SharedWith.length > 0) {
+            //             return result.SharedWith.some(val => paginationFilterState.filterVal.sharedType.includes(val.type));
+            //         }
+            //         return false;
+            //     });
+            //     setSharedFiles(filteredSharedResults);
+            // } else {
+            //     setSharedFiles(sharedResults.filter(result => result.SharedWith !== null));
+            // }
             setSharedFiles(sharedResults.filter(result => result.SharedWith !== null));
             setLoadingErrorState(prevState => ({ ...prevState, loading: false }));
         } catch (error) {
@@ -145,8 +162,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         }
     };
 
-
-
     useEffect(() => {
         const init = async (): Promise<void> => {
             await getFilesAndLoadPages(paginationFilterState);
@@ -167,101 +182,6 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         serverRefreshData().catch(error => console.error("Error during refreshData:", error));
     }, [paginationFilterState.isRefreshData])
 
-
-    const columns: IColumn[] = useMemo(() => [
-        {
-            key: 'FileExtension',
-            name: 'FileExtension',
-            fieldName: 'FileExtension',
-            minWidth: 16,
-            maxWidth: 16,
-            isIconOnly: true,
-            isResizable: false,
-            onRender: (item: IFileSharingResponse) => <FileExtentionColumn ext={item.FileExtension} />
-        },
-        {
-            key: 'FileName',
-            name: 'File',
-            fieldName: 'FileName',
-            minWidth: 100,
-            maxWidth: 200,
-            isResizable: true,
-            isSortedDescending: false,
-            isRowHeader: true,
-            sortAscendingAriaLabel: 'Sorted A to Z',
-            sortDescendingAriaLabel: 'Sorted Z to A',
-            data: 'string',
-            onRender: (item: IFileSharingResponse) => <LinkColumn label={item.FileName} url={item.Url} />
-        },
-        {
-            key: 'Channel',
-            name: 'Channel/Folder',
-            fieldName: 'Channel',
-            minWidth: 100,
-            maxWidth: 150,
-            isResizable: true,
-            data: 'string',
-            onRender: (item: IFileSharingResponse) => <LinkColumn label={item.Channel} url={item.FolderUrl} />
-        },
-        {
-            key: 'SharedWith',
-            name: 'Shared',
-            fieldName: 'SharedWith',
-            minWidth: 150,
-            maxWidth: 185,
-            isResizable: true,
-            onRender: (item: IFileSharingResponse) => <SharedWithColumn
-                sharedWith={item.SharedWith}
-                sharedType={item.SharedType}
-                filteredSharedTypes={paginationFilterState.filterVal.sharedType} />
-        },
-
-        {
-            key: 'LastModified',
-            name: 'Modified',
-            fieldName: 'LastModified',
-            minWidth: 120,
-            maxWidth: 170,
-            isResizable: true,
-            isPadded: true,
-            onRender: (item: IFileSharingResponse) => (
-                <div>
-                    {item.LastModifiedBy?.id &&
-                        <Persona
-                            size={PersonaSize.size24}
-                            imageAlt={item.LastModifiedBy?.displayName || ''}
-                            imageUrl={`${window.location.origin}/_layouts/15/userphoto.aspx?size=M&username=${item.LastModifiedBy?.id}`}
-                            text={item.LastModifiedBy?.displayName || ''}
-                            secondaryText={item.LastModifiedBy?.id}
-                        />
-                    }
-                    <Text style={{ marginLeft: 32 }} variant="small">{moment(item.LastModified).format('LL')}</Text>
-                </div>
-            ),
-        },
-        {
-            key: 'SiteUrl',
-            name: 'Site',
-            fieldName: 'SiteUrl',
-            minWidth: 120,
-            maxWidth: 150,
-            isResizable: true,
-            data: 'string',
-            onRender: (item: IFileSharingResponse) => {
-                const siteName = item.SiteUrl.split("/")[4];
-                return <LinkColumn label={siteName} url={item.SiteUrl} />;
-            }
-        },
-        {
-            key: "Action",
-            name: "",
-            minWidth: 4,
-            onRender: (item: IFileSharingResponse) => (
-                <ActionButton iconProps={{ iconName: 'View' }} onClick={() => setPaginationFilterState(prevState => ({ ...prevState, selectedDocument: item }))} />
-            )
-        }
-    ], [paginationFilterState.filterVal.sharedType]);
-
     if (!loadingErrorState.loading && loadingErrorState.error) {
         return (
             <div>
@@ -274,71 +194,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
     return (
         <div>
-            <div>
-                <Stack horizontal horizontalAlign="space-between">
-                    <Stack.Item grow={3}>
-
-                        <div style={{ maxWidth: "800px" }}>
-
-                            <SearchBox
-                                placeholder="Search..."
-                                underlined={true}
-                                onSearch={async (val: string) => {
-                                    setPaginationFilterState(prevState => ({
-                                        ...prevState,
-                                        searchQuery: val,
-                                        isRefreshData: true
-                                    }));
-                                }}
-                                onClear={async () => {
-                                    setPaginationFilterState(prevState => ({
-                                        ...prevState,
-                                        searchQuery: "",
-                                        isRefreshData: true
-                                    }));
-                                }}
-                            />
-                        </div>
-
-                    </Stack.Item>
-                    <Stack horizontalAlign="end" style={{ marginLeft: 12 }}>
-                        <PrimaryButton iconProps={{ iconName: 'Filter' }}
-                            text="Filter" onClick={openFilterPanel} />
-
-                        {isFilterPanelOpen &&
-                            <FilterPanel
-                                filterItem={paginationFilterState.filterVal}
-                                isFilterPanelOpen={isFilterPanelOpen}
-                                onDismissFilterPanel={async (newFilter) => {
-                                    dismissFilterPanel();
-                                    if (newFilter) {
-                                        const updatedFilter: IPaginationFilterState = {
-                                            ...paginationFilterState,
-                                            filterVal: newFilter,
-                                            currentPage: 1,
-                                            isRefreshData: true
-                                        };
-                                        setPaginationFilterState(updatedFilter);
-                                    }
-                                }}
-                            />
-                        }
-
-                    </Stack>
-                </Stack>
-            </div>
-
-            <div style={{ padding: "12px 0" }}>
-                {/* show filtered items here */}
-                {paginationFilterState.filterVal.siteUrl && <div>
-                    <FontIcon style={{ marginRight: 4 }} aria-label="Filter" iconName="Filter" />
-                    <Text variant="small">Site: <i>{paginationFilterState.filterVal.siteUrl}</i></Text>
-                </div>}
-                {paginationFilterState.filterVal.fileFolder !== "BothFilesFolders" && <div>
-                    <FontIcon style={{ marginRight: 4 }} aria-label="Filter" iconName="Filter" />
-                    <Text variant="small">Type: <i>{paginationFilterState.filterVal.fileFolder}</i></Text>
-                </div>}
-            </div>
+            <FilterItems paginationFilterState={paginationFilterState} setPaginationFilterState={setPaginationFilterState} />
 
             {paginationFilterState.selectedDocument && (
                 <FilePermissionPanel
@@ -360,7 +216,10 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
                 <ShimmeredDetailsList
                     enableShimmer={loadingErrorState.loading}
                     usePageCache={true}
-                    columns={columns}
+                    columns={Columns({
+                        paginationFilterState,
+                        setPaginationFilterState,
+                    })}
                     items={sharedFiles}
                     selectionMode={SelectionMode.none}
                 />

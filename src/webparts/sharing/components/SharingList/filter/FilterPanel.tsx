@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as React from 'react'
-import { Checkbox, ChoiceGroup, DefaultButton, IChoiceGroupOption, Label, Panel, PrimaryButton, TextField, Toggle } from '@fluentui/react';
+import { Checkbox, ChoiceGroup, DefaultButton, IChoiceGroupOption, Icon, Label, Panel, PrimaryButton, TextField, TooltipHost } from '@fluentui/react';
 import { useContext, useState } from 'react';
 import { SharedType } from '../../../../../common/model';
 import { IPeoplePickerContext, PeoplePicker, PrincipalType } from "@pnp/spfx-controls-react/lib/PeoplePicker";
@@ -33,14 +33,14 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
     };
 
     const [filtreVal, setFilterVal] = useState<IFilterItem>(props.filterItem);
-    const [isSearchOneDrive, setIsSearchOneDrive] = useState<boolean>(filtreVal.siteUrl.indexOf("-my.sharepoint.com") > -1);
-
     // Define the options for the file/folder filter with the correct type for the key
     const fileFolderOptions: IChoiceGroupOption[] = [
         { key: "BothFilesFolders" as FileFolderFilter, text: 'Both files & folders' },
         { key: 'OnlyFiles' as FileFolderFilter, text: 'Only files' },
         { key: 'OnlyFolders' as FileFolderFilter, text: 'Only folders' }
     ];
+
+
 
     return <div>
         <Panel
@@ -63,21 +63,11 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
             <div>
 
                 <div style={{ padding: "12px 0" }}>
-                    <Toggle label="Search user ondrive"
-                        checked={isSearchOneDrive}
-                        onChange={(_e, checked) => {
-                            setIsSearchOneDrive(checked ?? false);
-                            if (checked) {
-                                setFilterVal({ ...filtreVal, siteUrl: "" });
-                            }
-                        }} />
-
                     <div style={{ paddingLeft: "6px" }}>
                         <TextField
                             multiline
                             label='Site Url'
                             resizable={false}
-                            disabled={isSearchOneDrive}
                             value={filtreVal.siteUrl}
                             onChange={(e, newVal = '') => setFilterVal({ ...filtreVal, siteUrl: newVal })}
                             placeholder={`https://contoso.sharepoint.com/sites/...`}
@@ -87,7 +77,6 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
                             context={peoplePickerContext}
                             titleText="OneDrive of the user"
                             personSelectionLimit={1}
-                            disabled={!isSearchOneDrive}
                             searchTextLimit={2}
                             onChange={(items) => {
                                 if (items.length > 0) {
@@ -113,7 +102,17 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
 
                 <div style={{ padding: "12px 0" }}>
-                    <Label>Shared Type</Label>
+                    <Label style={{ display: "flex", justifyContent: "space-between" }}>
+                        Shared With
+
+                        <TooltipHost
+                            content="Filters on items visible on a single page (Not server filter)"
+                            id={"infoicon-tooltip"}
+                        >
+                            <Icon iconName={"info"} id={"infoicon"} />
+                        </TooltipHost>
+
+                    </Label>
                     <div style={{ gap: "8px", display: "flex", flexDirection: "column" }}>
                         <Checkbox label="Guest/External Users"
                             checked={filtreVal.sharedType.filter(val => val === "Guest").length > 0}
@@ -121,6 +120,15 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
                                 setFilterVal({
                                     ...filtreVal,
                                     sharedType: checked ? [...filtreVal.sharedType, "Guest"] : filtreVal.sharedType.filter(val => val !== "Guest")
+                                })
+                            }}
+                        />
+                        <Checkbox label="Everyone except external users"
+                            checked={filtreVal.sharedType.filter(val => val === "Everyone").length > 0}
+                            onChange={(_ex, checked) => {
+                                setFilterVal({
+                                    ...filtreVal,
+                                    sharedType: checked ? [...filtreVal.sharedType, "Everyone"] : filtreVal.sharedType.filter(val => val !== "Everyone")
                                 })
                             }}
                         />
