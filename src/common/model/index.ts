@@ -1,5 +1,4 @@
 import { Identity } from "@microsoft/microsoft-graph-types";
-import { DeleteAction } from "@microsoft/microsoft-graph-types-beta";
 
 export interface IDriveItems {
     driveId: string;
@@ -60,42 +59,6 @@ export interface IGraphResponseMetadata {
 export interface ISiteSearchResponse {
     name: string;
     url: string;
-}
-
-export interface IItemActivityAction {
-    comment: {
-        isReply?: false,
-        parentAuthor?: Identity,
-        participants?: Identity[]
-    };
-    create: {};
-    delete: DeleteAction;
-    edit: {};
-    mention: {
-        mentionees: Identity[];
-    };
-    move: {
-        from?: string;
-        to?: string;
-    };
-    rename: {
-        oldName?: string;
-        newName?: string;
-    };
-    restore: {};
-    share: {
-        recipients: Identity[]
-    };
-    version: {
-        newVersion: string;
-    };
-}
-
-export interface IItemActivity {
-    id: string;
-    action: string;
-    actor: Identity | undefined;
-    time: Date;
 }
 
 //#endregion

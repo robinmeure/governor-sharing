@@ -1,8 +1,9 @@
 
 
 import * as React from 'react'
-import { TooltipHost, Icon, PersonaSize, Persona, Text } from '@fluentui/react';
+import { TooltipHost, Icon, PersonaSize, Persona, Text, Link } from '@fluentui/react';
 import { ISharedUser, SharedType } from '../../../../../common/model';
+import { useEffect, useRef, useState } from 'react';
 
 interface ISharedWithColumnProps {
     sharedType: SharedType;
@@ -12,7 +13,15 @@ interface ISharedWithColumnProps {
 
 
 const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, sharedType, filteredSharedTypes }): JSX.Element => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const contentRef = useRef<HTMLDivElement | null>(null);
+    const [showButton, setShowButton] = useState(false);
 
+    useEffect(() => {
+        if (contentRef.current && contentRef.current.scrollHeight > 90) {
+            setShowButton(true);
+        }
+    }, []);
 
     let locSharedWith = sharedWith;
     if (filteredSharedTypes.length > 0) {
@@ -22,10 +31,19 @@ const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, shared
             }
         })
     }
+    const handleShowMore = (): void => {
+        setIsExpanded(true);
+        setShowButton(false);
+    };
     return (
         <>
-            <div>
-
+            <div ref={contentRef}
+                className="content"
+                style={{
+                    maxHeight: isExpanded ? 'none' : '90px',
+                    overflow: 'hidden',
+                    transition: 'max-height 0.3s ease',
+                }}>
                 <div>
                     {(() => {
                         let textContent = "", iconName = "";
@@ -63,7 +81,7 @@ const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, shared
                 </div>
 
                 {locSharedWith.map((sharedMember) => {
-                    return <div key={sharedMember.id}>
+                    return <div style={{ paddingBottom: 4 }} key={sharedMember.id}>
                         <Persona
                             size={PersonaSize.size24}
                             imageAlt={sharedMember?.displayName || ''}
@@ -73,25 +91,10 @@ const SharedWithColumn: React.FC<ISharedWithColumnProps> = ({ sharedWith, shared
                         />
                     </div>
                 })}
-
-                {/* {sharedWith?.length === 0 && <Persona text={`${sharedWith[0]?.name}`} hidePersonaDetails={true} size={PersonaSize.size24} />}
-
-                {sharedWith?.length > 1 && (
-                    <Facepile
-                        personaSize={PersonaSize.size24}
-                        maxDisplayablePersonas={5}
-                        personas={sharedWith}
-                        overflowButtonType={OverflowButtonType.descriptive}
-                        overflowButtonProps={{
-                            ariaLabel: 'More users'
-                        }}
-                        ariaDescription="List of people who has been shared with."
-                        ariaLabel="List of people who has been shared with."
-                    />
-                )} */}
-
             </div>
-
+            {showButton && !isExpanded && (
+                <Link onClick={handleShowMore}>Show More</Link>
+            )}
 
         </>
     );

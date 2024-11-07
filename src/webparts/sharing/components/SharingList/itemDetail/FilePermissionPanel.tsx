@@ -29,7 +29,7 @@ const FilePermissionPanel: React.FC<IFilePermissionPanelProps> = ({ file, isOpen
         >
             <div style={{ paddingTop: 32 }}>
                 <Pivot aria-label="Basic Pivot Example">
-                    <PivotItem headerText="Permission" itemIcon='ReminderPerson' >
+                    <PivotItem headerText="Manage Access" itemIcon='ReminderPerson' >
                         <div>
                             <iframe
                                 src={`${file.SiteUrl}/_layouts/15/sharedialog.aspx?listId=${file.ListId}&listItemId=${file.ListItemId}&clientId=sharePoint&mode=manageAccess&ma=0`} width="100%"

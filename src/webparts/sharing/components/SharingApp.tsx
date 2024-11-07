@@ -5,14 +5,13 @@ import { SharingWebPartContext } from '../hooks/SharingWebPartContext';
 
 
 const SharingApp: React.FC = (): JSX.Element => {
-    const governContext = React.useContext(SharingWebPartContext);
-    const properties = governContext.webpartProperties;
+    const { webpartProperties } = React.useContext(SharingWebPartContext);
 
     return <>
-        {properties.webpartTitle &&
+        {webpartProperties.webpartTitle &&
             <div>
                 <Text variant={"xLarge"} style={{ paddingBottom: 24 }} nowrap block>
-                    {properties.webpartTitle}
+                    {webpartProperties.webpartTitle}
                 </Text>
 
             </div>}

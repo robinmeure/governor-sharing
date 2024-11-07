@@ -25,7 +25,7 @@ interface IFilterPanelProps {
 
 const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
 
-    const { webpartContext } = useContext(SharingWebPartContext);
+    const { webpartContext, isTeams } = useContext(SharingWebPartContext);
     const peoplePickerContext: IPeoplePickerContext = {
         absoluteUrl: webpartContext.pageContext.web.absoluteUrl,
         msGraphClientFactory: webpartContext.msGraphClientFactory as any,
@@ -61,50 +61,52 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
             isFooterAtBottom={true}
         >
             <div>
+                {!isTeams &&
+                    <div style={{ padding: "12px 0" }}>
+                        <div style={{ paddingLeft: "6px" }}>
 
-                <div style={{ padding: "12px 0" }}>
-                    <div style={{ paddingLeft: "6px" }}>
-                        <TextField
-                            multiline
-                            label='Site Url'
-                            resizable={false}
-                            value={filtreVal.siteUrl}
-                            onChange={(e, newVal = '') => setFilterVal({ ...filtreVal, siteUrl: newVal })}
-                            placeholder={`https://contoso.sharepoint.com/sites/...`}
-                            description="Url of the site" />
+                            <TextField
+                                multiline
+                                label='Site Url'
+                                resizable={false}
+                                value={filtreVal.siteUrl}
+                                onChange={(e, newVal = '') => setFilterVal({ ...filtreVal, siteUrl: newVal })}
+                                placeholder={`https://contoso.sharepoint.com/sites/...`}
+                                description="Url of the site" />
 
-                        <PeoplePicker
-                            context={peoplePickerContext}
-                            titleText="OneDrive of the user"
-                            personSelectionLimit={1}
-                            searchTextLimit={2}
-                            onChange={(items) => {
-                                if (items.length > 0) {
-                                    let selectedUserEmail = items[0].secondaryText ?? "";
-                                    if (!selectedUserEmail) {
-                                        selectedUserEmail = items[0].id ?? "";
-                                        selectedUserEmail = selectedUserEmail.split("|")[2];
+                            <PeoplePicker
+                                context={peoplePickerContext}
+                                titleText="OneDrive of the user"
+                                personSelectionLimit={1}
+                                searchTextLimit={2}
+                                onChange={(items) => {
+                                    if (items.length > 0) {
+                                        let selectedUserEmail = items[0].secondaryText ?? "";
+                                        if (!selectedUserEmail) {
+                                            selectedUserEmail = items[0].id ?? "";
+                                            selectedUserEmail = selectedUserEmail.split("|")[2];
+                                        }
+                                        const locSelectedUser = selectedUserEmail.replace(/[^a-zA-Z0-9]/g, "_") ?? "";
+                                        const tenantUrl = webpartContext.pageContext.web.absoluteUrl.split(".sharepoint.com")[0];
+                                        const oneDriveUrl = `${tenantUrl}-my.sharepoint.com/personal/${locSelectedUser}`;
+                                        setFilterVal({ ...filtreVal, siteUrl: oneDriveUrl });
+                                    } else {
+                                        setFilterVal({ ...filtreVal, siteUrl: "" });
                                     }
-                                    const locSelectedUser = selectedUserEmail.replace(/[^a-zA-Z0-9]/g, "_") ?? "";
-                                    const tenantUrl = webpartContext.pageContext.web.absoluteUrl.split(".sharepoint.com")[0];
-                                    const oneDriveUrl = `${tenantUrl}-my.sharepoint.com/personal/${locSelectedUser}`;
-                                    setFilterVal({ ...filtreVal, siteUrl: oneDriveUrl });
-                                } else {
-                                    setFilterVal({ ...filtreVal, siteUrl: "" });
                                 }
-                            }
-                            }
-                            principalTypes={[PrincipalType.User]}
-                            resolveDelay={1000} />
-                    </div>
-                </div>
+                                }
+                                principalTypes={[PrincipalType.User]}
+                                resolveDelay={1000} />
+
+
+                        </div>
+                    </div>}
 
 
 
                 <div style={{ padding: "12px 0" }}>
                     <Label style={{ display: "flex", justifyContent: "space-between" }}>
                         Shared With
-
                         <TooltipHost
                             content="Filters on items visible on a single page (Not server filter)"
                             id={"infoicon-tooltip"}

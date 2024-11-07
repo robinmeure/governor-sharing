@@ -6,6 +6,7 @@ import { SharingWebPartContext } from '../../../hooks/SharingWebPartContext';
 import { IPaginationFilterState } from '../SharingDetailedList';
 import FilterPanel from './FilterPanel';
 
+
 interface IFilterItemsProps {
     setPaginationFilterState: React.Dispatch<React.SetStateAction<IPaginationFilterState>>;
     paginationFilterState: IPaginationFilterState;
@@ -73,11 +74,11 @@ const FilterItems: React.FC<IFilterItemsProps> = (props): JSX.Element => {
         <div style={{ paddingTop: "12px" }}>
             {props.paginationFilterState.searchMetadata &&
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <Text variant="medium">
-                        Total results: <b>{props.paginationFilterState?.searchMetadata?.totalResults}</b>
+                    <Text variant="smallPlus">
+                        <b>{props.paginationFilterState?.searchMetadata?.totalResults}</b> shared items found
                     </Text>
                     {governContext.webpartProperties.debugMode &&
-                        <Text variant="medium">
+                        <Text variant="smallPlus">
                             Query: <b>{props.paginationFilterState?.queryString}</b>
                         </Text>
                     }
@@ -88,7 +89,7 @@ const FilterItems: React.FC<IFilterItemsProps> = (props): JSX.Element => {
 
         <div style={{ padding: "12px 0" }}>
             {/* show filtered items here */}
-            {<div>
+            {!governContext.isTeams && <div>
                 <FontIcon style={{ marginRight: 4, cursor: "pointer" }} aria-label="ClearFilter-Site" iconName="ClearFilter"
                     onClick={() => props.setPaginationFilterState(prevState => ({ ...prevState, filterVal: { ...prevState.filterVal, siteUrl: "" }, isRefreshData: true }))}
                 />

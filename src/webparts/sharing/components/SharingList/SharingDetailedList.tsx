@@ -3,12 +3,12 @@ import * as React from 'react';
 import { useContext, useEffect, useState } from 'react';
 import { SharingWebPartContext } from '../../hooks/SharingWebPartContext';
 import { Pagination } from '@pnp/spfx-controls-react';
-import { searchQueryGeneratorForDocs } from '../../../../common/utils/Utils';
+import { searchQueryGeneratorForFiles } from '../../../../common/utils/Utils';
 import { SearchRequest } from '@microsoft/microsoft-graph-types';
 import { _CONST } from '../../../../common/utils/Const';
 import { useGraphService } from '../../../../common/services/useGraphService';
 import { IDriveItems, IFileSharingResponse, IGraphResponseMetadata, IListItemSearchResponse } from '../../../../common/model';
-import { DrivePermissionResponseMapper, GraphSearchResponseMapper, GraphSearchResultMetadata } from '../../../../common/config/Mapper';
+import { DrivePermissionResponseMapper, GraphSearchResponseMapper, GraphSearchResultMetadata } from '../../../../common/utils/Mapper';
 import FilePermissionPanel from './itemDetail/FilePermissionPanel';
 import { IFilterItem } from './filter/FilterPanel';
 import FilterItems from './filter/FilterItems';
@@ -45,7 +45,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
         currentPage: 1,
         totalPages: 1,
         filterVal: {
-            siteUrl: "", //webpartContext.pageContext.site.absoluteUrl,
+            siteUrl: governContext.isTeams ? webpartContext.pageContext.site.absoluteUrl : "",
             sharedType: ["Link", "Inherited", "Member", "Guest", "Everyone", "Group"],
             modifiedBy: "",
             fileFolder: "BothFilesFolders"
@@ -62,7 +62,7 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
 
     const getFiles = async (queryFilter: IPaginationFilterState): Promise<IListItemSearchResponse[]> => {
         try {
-            const queryString = searchQueryGeneratorForDocs(webpartContext, queryFilter);
+            const queryString = searchQueryGeneratorForFiles(webpartContext, queryFilter);
             const searchReqForDocs: SearchRequest & { trimDuplicates: boolean } = {
                 entityTypes: _CONST.GraphSearch.DocsSearch.EntityType,
                 query: { queryString: queryString },

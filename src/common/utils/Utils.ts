@@ -194,7 +194,7 @@ export function processUsers(users: string): IFacepilePersona[] {
 }
 
 
-export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter: IPaginationFilterState): string => {
+export const searchQueryGeneratorForFiles = (context: WebPartContext, queryFilter: IPaginationFilterState): string => {
   const tenantId = context.pageContext.aadInfo.tenantId;
   const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
 
@@ -211,8 +211,6 @@ export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter
 
   let query = `${testFilter}${searchQuery}${siteFilter}${fileFolderFilter} AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
 
-  // let query = `${testFilter}${searchQuery}${siteFilter}${fileFolderFilter} AND (NOT FileExtension:aspx)`;
-
   let isTeams = false, isPrivateChannel = false;
   let groupId = "";
   if (context.sdks.microsoftTeams) {
@@ -221,7 +219,6 @@ export const searchQueryGeneratorForDocs = (context: WebPartContext, queryFilter
   if (isTeams) {
     isPrivateChannel = context.sdks.microsoftTeams && (context.sdks.microsoftTeams.context.channelType === "Private") || false;
     groupId = context.sdks.microsoftTeams?.context?.groupId ?? "";
-    // const siteUrl = context.sdks.microsoftTeams ? context.sdks.microsoftTeams.context.teamSiteUrl : '';
     if (!isPrivateChannel)
       query = `(IsDocument:TRUE OR IsContainer:TRUE) AND (NOT FileExtension:aspx) AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) AND (GroupId:${groupId} OR RelatedGroupId:${groupId})`;
   }

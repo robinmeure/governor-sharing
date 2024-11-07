@@ -5,17 +5,10 @@ import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import { initializeIcons } from '@fluentui/react/lib/Icons';
 import { initializeFileTypeIcons } from '@fluentui/react-file-type-icons';
-import {
-  Logger,
-  ConsoleListener,
-  LogLevel
-} from "@pnp/logging";
 import { IPropertyPaneConfiguration, PropertyPaneTextField, PropertyPaneToggle } from '@microsoft/sp-property-pane';
 import { ISharingWebPartContext } from './model';
 import { SharingWebPartContext } from './hooks/SharingWebPartContext';
 import SharingApp from './components/SharingApp';
-
-const LOG_SOURCE: string = 'Microsoft-Governance-Sharing';
 
 export interface ISharingWebPartProps {
   webpartTitle: string;
@@ -28,11 +21,6 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     // load the filetype icons and other icons
     initializeIcons(undefined, { disableWarnings: true });
     initializeFileTypeIcons();
-
-    // setting up the logging framework
-    Logger.subscribe(ConsoleListener(LOG_SOURCE));
-    const debug = new URLSearchParams(window.location.search).get("debug") === "true" || this.properties.debugMode;
-    Logger.activeLogLevel = debug ? LogLevel.Verbose : LogLevel.Warning;
   }
 
   public render(): void {
@@ -42,7 +30,7 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
       isTeams: this.context.sdks.microsoftTeams ? true : false,
       webpartProperties: this.properties
     };
-    // Put the context value with Provider
+    // Put the context & webpart propertey values in Provider
     const element: React.ReactElement = React.createElement(
       SharingWebPartContext.Provider,
       {
