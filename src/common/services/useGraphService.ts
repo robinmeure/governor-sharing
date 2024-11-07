@@ -96,7 +96,6 @@ export const useGraphService = (spfxContext: WebPartContext | ApplicationCustomi
             });
 
             await Promise.all(driveItemsPromises);
-            console.log("FazLog ~ getDriveItemsPermission ~ driveItemPermissions:", driveItemPermissions);
             return driveItemPermissions;
         } catch (error) {
             console.error("getDriveItemsPermission ~ error", error);

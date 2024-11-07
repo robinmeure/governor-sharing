@@ -6,7 +6,7 @@ import { useGraphService } from '../../../../../common/services/useGraphService'
 import { SharingWebPartContext } from '../../../hooks/SharingWebPartContext';
 import { useEffect, useState } from 'react';
 import { ItemActivityOLD } from '@microsoft/microsoft-graph-types-beta';
-import ItemActivities from '../../helper/ItemActivities';
+import ItemActivities from './ItemActivities';
 import { MessageBar, MessageBarType, Spinner } from '@fluentui/react';
 
 interface IFileActivityPanelProps {

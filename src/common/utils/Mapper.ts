@@ -1,13 +1,12 @@
 import { IFacepilePersona } from "@fluentui/react";
 import { SearchResponse, EntityType, SearchHit, ListItem, DriveItem, Site } from "@microsoft/microsoft-graph-types";
-import { IListItemSearchResponse, ISiteSearchResponse, IFileSharingResponse, SharedType, ISharedUser } from "../model";
+import { IListItemSearchResponse, ISiteSearchResponse, IFileSharingResponse, SharedType, ISharedUser, IGraphResponseMetadata } from "../model";
 import { convertToFacePilePersona, convertUserToFacePilePersona, processUsers } from "../utils/Utils";
 import { DrivePermissionResponse } from "../services/useGraphService";
 
 
 /**
  * Maps a Graph Search Response to a specific type based on the provided entity type.
- *
  * @template T - The type to which the search response will be mapped.
  * @param {SearchResponse[]} searchResponse - The search response from the Graph API.
  * @param {EntityType[]} entityType - The types of entities to map from the search response.
@@ -74,6 +73,31 @@ export const GraphSearchResponseMapper = <T>(searchResponse: SearchResponse[], e
 
 
         return locMappedVal as T[];
+    } catch (error) {
+        console.log("GraphSearchResponseMapper ~ error:", error);
+        throw error;
+    }
+}
+
+/**
+ * Maps a Graph Search metadata to a IGraphResponseMetadata type.
+ * @param {SearchResponse[]} searchResponse - The search response from the Graph API.
+ * @returns {IGraphResponseMetadata} - The mapped metadata response.
+ * @throws Will throw an error if the mapping process fails.
+ */
+export const GraphSearchResultMetadata = (searchResponse: SearchResponse[]): IGraphResponseMetadata | undefined => {
+    try {
+        let locMetadata: IGraphResponseMetadata | undefined = undefined;
+        searchResponse.forEach(results => {
+            results.hitsContainers?.forEach(hitsContainer => {
+                if (locMetadata) return;
+                locMetadata = {
+                    moreResultsAvailable: hitsContainer.moreResultsAvailable ?? false,
+                    totalResults: hitsContainer.total ?? 0, // Provide a default value of 0 if totalResults is undefined
+                }
+            });
+        });
+        return locMetadata;
     } catch (error) {
         console.log("GraphSearchResponseMapper ~ error:", error);
         throw error;
@@ -173,18 +197,26 @@ export const DrivePermissionResponseMapper = (file: IListItemSearchResponse, dri
         let isGuest = false;
         let isLink = false;
         let isInherited = false;
-
+        let isEveryone = false;
         for (const user of sharedWithUser) {
             switch (user.data) {
                 case "Guest": isGuest = true; break;
                 case "Organization": isLink = true; break;
                 case "Inherited": isInherited = true; break;
+                case "Member": {
+                    if (user.personaName === "Everyone except external users") {
+                        isEveryone = true;
+                    }
+                    break;
+                }
             }
         }
 
         // if we found a guest user, we need to set the sharingUserType to Guest
         if (isGuest) {
             sharingUserType = "Guest";
+        } else if (isEveryone) {
+            sharingUserType = "Everyone";
         }
         else if (isLink) {
             sharingUserType = "Link";
