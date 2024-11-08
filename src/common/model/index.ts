@@ -44,11 +44,6 @@ export interface IListItemSearchResponse {
     Path: string;
     LastModifiedTime: Date | undefined;
     LastModifiedBy: Identity | undefined;
-
-    // SharedWithDetails: string;
-    // Rank: number;
-    // DocId: number;
-    // WorkId: number;
 }
 
 export interface IGraphResponseMetadata {
