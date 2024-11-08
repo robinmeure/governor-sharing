@@ -75,7 +75,7 @@ const FilterItems: React.FC<IFilterItemsProps> = (props): JSX.Element => {
             {props.paginationFilterState.searchMetadata &&
                 <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <Text variant="smallPlus">
-                        <b>{props.paginationFilterState?.searchMetadata?.totalResults}</b> shared items found
+                        <b>{props.paginationFilterState?.searchMetadata?.totalResults}</b> items found
                     </Text>
                     {governContext.webpartProperties.debugMode &&
                         <Text variant="smallPlus">
