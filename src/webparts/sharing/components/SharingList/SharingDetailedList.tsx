@@ -48,7 +48,8 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             siteUrl: governContext.isTeams ? webpartContext.pageContext.site.absoluteUrl : "",
             sharedType: ["Link", "Inherited", "Member", "Guest", "Everyone", "Group"],
             modifiedBy: "",
-            fileFolder: "BothFilesFolders"
+            fileFolder: "BothFilesFolders",
+            isSharedWithUsersOWSUser: true
         },
         searchMetadata: undefined,
         selectedDocument: undefined,
