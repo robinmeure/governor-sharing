@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as React from 'react'
-import { Checkbox, ChoiceGroup, DefaultButton, IChoiceGroupOption, Icon, Label, Panel, PrimaryButton, TextField, Toggle, TooltipHost } from '@fluentui/react';
+import { Checkbox, ChoiceGroup, DefaultButton, IChoiceGroupOption, Icon, Label, Panel, PrimaryButton, TextField, TooltipHost } from '@fluentui/react';
 import { useContext, useState } from 'react';
 import { SharedType } from '../../../../../common/model';
 import { IPeoplePickerContext, PeoplePicker, PrincipalType } from "@pnp/spfx-controls-react/lib/PeoplePicker";
@@ -14,7 +14,7 @@ export interface IFilterItem {
     modifiedBy: string;
     sharedType: SharedType[];
     fileFolder: FileFolderFilter;
-    isSharedWithUsersOWSUser: boolean;
+    preQuery: string;
 }
 
 interface IFilterPanelProps {
@@ -62,6 +62,14 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
             isFooterAtBottom={true}
         >
             <div>
+                <div style={{ padding: "12px 0" }}>
+                    <TextField
+                        label='Prequery from webpart settings'
+                        value={filtreVal.preQuery}
+                        disabled={true}
+                        multiline
+                    />
+                </div>
                 {!isTeams &&
                     <div style={{ padding: "12px 0" }}>
                         <div style={{ paddingLeft: "6px" }}>
@@ -163,13 +171,6 @@ const FilterPanel: React.FC<IFilterPanelProps> = (props): JSX.Element => {
                         onChange={(_e, op) => {
                             setFilterVal({ ...filtreVal, fileFolder: op?.key as FileFolderFilter })
                         }} label="Item type" />
-                </div>
-
-                <div style={{ padding: "12px 0" }}>
-                    <Toggle label="Include SharedWithUsersOWSUser" defaultChecked={filtreVal.isSharedWithUsersOWSUser}
-                        onText="Yes" offText="No" onChange={() => {
-                            setFilterVal({ ...filtreVal, isSharedWithUsersOWSUser: !filtreVal.isSharedWithUsersOWSUser })
-                        }} />
                 </div>
             </div>
         </Panel>

@@ -49,8 +49,9 @@ const SharingDetailedList: React.FC = (): JSX.Element => {
             sharedType: ["Link", "Inherited", "Member", "Guest", "Everyone", "Group"],
             modifiedBy: "",
             fileFolder: "BothFilesFolders",
-            isSharedWithUsersOWSUser: true
-        },
+            preQuery: governContext.webpartProperties.preQuery
+        }
+        ,
         searchMetadata: undefined,
         selectedDocument: undefined,
         searchKeyword: "",

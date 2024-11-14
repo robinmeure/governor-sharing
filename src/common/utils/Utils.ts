@@ -101,23 +101,22 @@ export function processUsers(users: string): IFacepilePersona[] {
 
 
 export const searchQueryGeneratorForFiles = (context: WebPartContext, queryFilter: IPaginationFilterState): string => {
-  const tenantId = context.pageContext.aadInfo.tenantId;
-  const everyoneExceptExternalsUserName = `spo-grid-all-users/${tenantId}`;
   const filterVal = queryFilter.filterVal;
   const searchQuery = queryFilter.searchKeyword ? queryFilter.searchKeyword + " " : "";
   const siteFilter = filterVal.siteUrl ? `(SPSiteUrl:${filterVal.siteUrl}) ` : "";
   const testFilter = DEBUG ? "" : "";
+  const preQuery = filterVal.preQuery ? `${filterVal.preQuery} ` : "";
+
   let fileFolderFilter = "(IsDocument:TRUE OR IsContainer:TRUE) ";
   if (filterVal.fileFolder === "OnlyFiles") {
     fileFolderFilter = "(IsDocument:TRUE OR IsContainer:FALSE) ";
   } else if (filterVal.fileFolder === "OnlyFolders") {
     fileFolderFilter = "(IsDocument:FALSE OR IsContainer:TRUE) ";
   }
-  const isSharedWithOWSUserFilter = queryFilter.filterVal.isSharedWithUsersOWSUser ? `((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone)) ` : "";
 
-  let query = `${testFilter}${searchQuery}${siteFilter}${fileFolderFilter}${isSharedWithOWSUserFilter} AND (NOT FileExtension:aspx)`;
+  let query = `${preQuery}${testFilter}${searchQuery}${siteFilter}${fileFolderFilter} AND (NOT FileExtension:aspx)`;
   //SharedWithUsersOWSUSER not working with all the items
-  // AND ((SharedWithUsersOWSUSER:*) OR (SharedWithUsersOWSUSER:${everyoneExceptExternalsUserName} OR SharedWithUsersOWSUser:Everyone))`;
+  // AND ((SharedWithUsersOWSUSER:*) OR SharedWithUsersOWSUser:Everyone))`;
 
   let isTeams = false, isPrivateChannel = false;
   let groupId = "";

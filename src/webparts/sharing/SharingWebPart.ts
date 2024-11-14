@@ -13,6 +13,7 @@ import SharingApp from './components/SharingApp';
 export interface ISharingWebPartProps {
   webpartTitle: string;
   debugMode: boolean;
+  preQuery: string;
 }
 
 export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPartProps> {
@@ -53,6 +54,10 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
               groupFields: [
                 PropertyPaneTextField('webpartTitle', {
                   label: "Webpart title"
+                }),
+                PropertyPaneTextField('preQuery', {
+                  label: "Query",
+                  multiline: true
                 }),
                 PropertyPaneToggle('debugMode', {
                   label: "Enable debug mode",
