@@ -1,70 +1,46 @@
-/* eslint-disable @typescript-eslint/typedef */
+
 import * as React from 'react'
 import * as ReactDom from 'react-dom';
 import { Version } from '@microsoft/sp-core-library';
 import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
-import "@pnp/graph/groups";
-
-import { ISharingViewProps } from './components/SharingView/ISharingViewProps';
 import { initializeIcons } from '@fluentui/react/lib/Icons';
-import PnPTelemetry from "@pnp/telemetry-js";
-import "@pnp/sp/webs";
-import "@pnp/sp/search";
-import IDataProvider from './components/SharingView/DataProvider';
-import DataProvider from './components/SharingView/DataProvider';
 import { initializeFileTypeIcons } from '@fluentui/react-file-type-icons';
-
-import {
-  Logger,
-  ConsoleListener,
-  LogLevel
-} from "@pnp/logging";
-import { IPropertyPaneConfiguration, PropertyPaneToggle, PropertyPaneTextField } from '@microsoft/sp-property-pane';
-import SharingViewSingle from './components/SharingView/SharingViewSingle';
-
-const LOG_SOURCE: string = 'Microsoft-Governance-Sharing';
+import { IPropertyPaneConfiguration, PropertyPaneTextField, PropertyPaneToggle } from '@microsoft/sp-property-pane';
+import { ISharingWebPartContext } from './model';
+import { SharingWebPartContext } from './hooks/SharingWebPartContext';
+import SharingApp from './components/SharingApp';
 
 export interface ISharingWebPartProps {
-  description: string;
+  webpartTitle: string;
   debugMode: boolean;
+  preQuery: string;
 }
 
 export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPartProps> {
-  private dataProvider: IDataProvider;
 
   protected async onInit(): Promise<void> {
     // load the filetype icons and other icons
     initializeIcons(undefined, { disableWarnings: true });
     initializeFileTypeIcons();
-
-    // setting up the logging framework
-    Logger.subscribe(ConsoleListener(LOG_SOURCE));
-    Logger.activeLogLevel = (this.properties.debugMode) ? LogLevel.Verbose : LogLevel.Warning;
-
-    // if you don't want to send telemetry data to PnP, you can opt-out here (see https://github.com/pnp/telemetry-js for details on what is being sent)
-    // const telemetry = PnPTelemetry.getInstance();
-    // telemetry.optOut();
-
-    // loading the data provider to get access to the REST/Search API
-    this.dataProvider = new DataProvider(this.context);
   }
 
   public render(): void {
-    // determine if we're in Teams or not
-    let isTeams: boolean = false;
-    if (this.context.sdks.microsoftTeams) {
-      isTeams = true;
-    }
-
-    const element: React.ReactElement<ISharingViewProps> = React.createElement(
-      SharingViewSingle,
+    const sharingWebPartContextValue: ISharingWebPartContext = {
+      pageLimit: 15,
+      webpartContext: this.context,
+      isTeams: this.context.sdks.microsoftTeams ? true : false,
+      webpartProperties: this.properties
+    };
+    // Put the context & webpart propertey values in Provider
+    const element: React.ReactElement = React.createElement(
+      SharingWebPartContext.Provider,
       {
-        pageLimit: 15,
-        context: this.context,
-        isTeams: isTeams,
-        dataProvider: this.dataProvider
-      }
+        value: sharingWebPartContextValue
+      },
+      React.createElement(SharingApp)
     );
+
+    // eslint-disable-next-line @microsoft/spfx/pair-react-dom-render-unmount
     ReactDom.render(element, this.domElement);
   }
 
@@ -72,13 +48,17 @@ export default class SharingWebPart extends BaseClientSideWebPart<ISharingWebPar
     return {
       pages: [
         {
-          header: {
-            description: this.properties.description
-          },
           groups: [
             {
               groupName: "Configuration",
               groupFields: [
+                PropertyPaneTextField('webpartTitle', {
+                  label: "Webpart title"
+                }),
+                PropertyPaneTextField('preQuery', {
+                  label: "Query",
+                  multiline: true
+                }),
                 PropertyPaneToggle('debugMode', {
                   label: "Enable debug mode",
                 })
